@@ -1,0 +1,190 @@
+# Jogos GOG para Batocera e para qualquer distro Linux
+
+*[English documentation](README.md)*
+
+Um instalador GOG vira **uma pasta `.pc`** que roda nos dois lugares sem
+modificação: o Batocera lê o `autorun.cmd`, as outras distros usam o `play.sh`.
+
+O truque é não gerar prefixo wine na hora de empacotar. Cada sistema cria o
+dele no primeiro boot, com o wine que tem. Prefixo empacotado = prefixo colado
+na distro onde foi feito.
+
+---
+
+## Instalando numa distro nova
+
+| Distro | Comando |
+|---|---|
+| Ubuntu / Mint / Debian | `sudo apt install innoextract wine` |
+| Fedora | `sudo dnf install innoextract wine` |
+| Arch / Manjaro | `sudo pacman -S innoextract wine` |
+| openSUSE | `sudo zypper in innoextract wine` |
+| **Batocera** | **nada** — o Wine-GE já vem embutido |
+
+- `innoextract` — só pra **empacotar** (desmonta o InnoSetup da GOG sem executar nada).
+- `wine` — só pra **jogar**. Quem só copia a pasta pro Batocera não precisa dele.
+
+Extras conforme o caso: `squashfs-tools` (abrir `.wsquashfs`), `winetricks`
+(jogos que pedem DLL da Microsoft).
+
+---
+
+## Regra universal: qualquer jogo GOG em 3 passos
+
+```bash
+# 1. empacotar (uma vez, em qualquer PC Linux)
+./build.sh NomeDoJogo.pc "/caminho/setup_jogo_1.2.3.exe" ["dlc1.exe" "dlc2.exe" ...]
+
+# 2. testar na sua distro
+./NomeDoJogo.pc/play.sh
+
+# 3. levar pro Batocera
+cp -r NomeDoJogo.pc /userdata/roms/windows/
+```
+
+O `build.sh` extrai o instalador base e as DLCs na mesma pasta (as DLCs
+sobrescrevem/mesclam), joga fora o andaime do instalador (`tmp/`, `__redist/`),
+lê o `goggame-*.info` pra descobrir o executável certo e escreve o
+`autorun.cmd`. Se perceber que é um jogo DOSBox ou ScummVM embrulhado, ele para
+antes de gerar o `autorun.cmd` e diz qual sistema usar.
+
+**Regras que valem sempre:**
+
+1. **Ponha o caminho do instalador entre aspas.** Nome da GOG-Games quase sempre
+   tem parêntese ou espaço, e sem aspas o bash reclama de
+   `erro de sintaxe próximo ao token inesperado '('`:
+
+   ```bash
+   ./build.sh Jogo.pc "/caminho/game (45311)/setup_jogo_(arbys)_(45311).exe"
+   ./build.sh Jogo.pc ~/"HD/Downloads/game (45311)/setup.exe"   # til fora das aspas
+   ```
+
+   `~` não expande dentro de aspas — use `$HOME` ou deixe o til de fora. Na
+   dúvida, digite o começo e complete com **Tab**, que o bash escapa sozinho.
+2. **Passe o `.exe`, nunca os `.bin`.** Instalador GOG grande vem como
+   `setup_jogo.exe` + `setup_jogo-1.bin` + `setup_jogo-2.bin`. O `--gog` do
+   innoextract junta tudo sozinho — os `.bin` só precisam estar na mesma pasta.
+3. **DLC é só mais um argumento**, na ordem: base primeiro, DLCs depois.
+4. **Copie a pasta inteira** pro Batocera, sem o `.prefix/` (é o prefixo local,
+   pesa uns 400 MB e o Batocera não usa).
+5. **`/userdata/` em btrfs ou ext4.** NTFS quebra wine, principalmente jogos
+   Steam/Galaxy.
+6. **Nome da pasta = nome que aparece na lista** do EmulationStation.
+
+---
+
+## Jogo antigo: DOSBox e ScummVM
+
+Clássico da GOG quase sempre é um DOSBox 0.74 (de 2010) embrulhado. Passar isso
+por wine é rodar um emulador dentro de um tradutor de API — o `build.sh` detecta
+e recusa. Pra saber antes mesmo de extrair:
+
+```bash
+innoextract -l "setup_jogo.exe" | grep -iE 'dosbox|scummvm'
+```
+
+Cuidado com a coincidência de nomes: **o sistema `dos` do Batocera também usa
+pasta `.pc`**. O que muda é o conteúdo.
+
+| | `roms/windows/Jogo.pc` | `roms/dos/JOGO.pc` |
+|---|---|---|
+| arquivo de controle | `autorun.cmd` | `dosbox.bat` |
+| roda com | Wine-GE | DOSBox |
+
+Duas regras do sistema `dos`: nome da pasta com **até 8 caracteres** sem acento,
+e **não copie o `.conf` da GOG** pro Batocera (a wiki avisa que trava) — use só o
+conteúdo do bloco `[autoexec]` como `dosbox.bat`:
+
+```
+c:
+cd JOGO
+JOGO.EXE
+```
+
+No desktop é o contrário: os `.conf` da GOG são bons e poupam trabalho.
+
+```bash
+sudo apt install dosbox-staging   # no openSUSE o pacote `dosbox` já é 0.82 (staging)
+cd Jogo.pc && dosbox -conf dosbox_jogo.conf -conf dosbox_jogo_single.conf
+```
+
+Antes de tudo isso, porém: veja se existe **source port** (OpenMW, DevilutionX,
+VCMI, OpenRA, GZDoom, OpenTTD, Arx Libertatis, CorsixTH...). O PCGamingWiki lista
+por jogo, e o Batocera já traz vários prontos. Port nativo > DOSBox > wine.
+
+### Ren'Py: o build Linux vem junto
+
+Visual novel Ren'Py (e alguns jogos com Java/Löve) empacota todas as plataformas
+no mesmo instalador. Depois do `build.sh`, se aparecer
+
+```
+note: native Linux build here -> ./Jogo.pc/Jogo.sh (no wine)
+```
+
+use esse `.sh` no desktop — é o jogo rodando nativo, sem tradução de API. O
+`build.sh` já acerta o bit de execução, que o instalador Windows não carrega.
+
+O `autorun.cmd` continua sendo gerado, porque no Batocera o caminho é o wine
+mesmo (o sistema `windows` não roda binário Linux).
+
+---
+
+## Quando o jogo não abre
+
+| Sintoma | Causa provável | Saída |
+|---|---|---|
+| `innoextract` reclama da versão do Inno | instalador novo demais | atualize o innoextract, ou instale com `wine setup.exe /VERYSILENT /DIR=$PWD/Jogo.pc` e apague os `unins*` |
+| abre e fecha na hora | 32-bit rodando como 64 | `WINEARCH=win32 ./Jogo.pc/play.sh` (apague o `.prefix` antes) |
+| falta `.dll` da Microsoft | jogo espera runtime instalado | `WINEPREFIX=$PWD/Jogo.pc/.prefix winetricks vcrun2019` (ou o que faltar) |
+| tela preta / travando no Batocera | falta DXVK | ligue `windows.dxvk` nas opções avançadas do jogo — **só vale antes do 1º boot**, senão apague o prefixo em `/userdata/saves/windows/` |
+| jogo pede instalação de verdade (registro, DirectX) | não é portátil | instale num prefixo com wine e empacote como `.wtgz` (veja abaixo) |
+
+---
+
+## O `autorun.cmd`
+
+Lido pelo Batocera **e** pelo `play.sh`. Precisa de quebra de linha **LF**
+(Unix), não CRLF — CRLF é a causa nº 1 de "não abre".
+
+```
+CMD=jogo.exe                      # obrigatório; entre aspas se tiver espaço
+DIR=64bit/bin                     # opcional, relativo à pasta .pc
+ENV=WINEDLLOVERRIDES="d3d11=n"    # opcional, repetível
+LANG=pt_BR.UTF-8                  # opcional
+SAVEDIR=drive_c/users/...         # opcional, Batocera v42+
+```
+
+Argumentos vão junto do `CMD`: `CMD="Meu Jogo.exe" --fullscreen`
+
+---
+
+## Formato de arquivo único (opcional)
+
+Só faz sentido pra jogo que **precisou** ser instalado com wine de verdade. Aí
+o que se empacota é o prefixo inteiro:
+
+```bash
+tar czf Jogo.wtgz -C /caminho/do/prefixo .   # em qualquer distro
+batocera-wine windows wine2winetgz Jogo.wine # ou, via SSH no Batocera
+```
+
+`./play.sh Jogo.wtgz` extrai pra `~/.local/share/wine-games/` e roda.
+Também aceita `.wsquashfs` (precisa de `unsquashfs`).
+
+Prefira **`.wtgz`**: é só um tar.gz, abre em qualquer lugar. Mas lembre que o
+prefixo lá dentro carrega o wine de origem — pra distribuir, `.pc` continua
+sendo melhor.
+
+---
+
+## Arquivos deste projeto
+
+| | |
+|---|---|
+| `build.sh` | instalador GOG → pasta `.pc` |
+| `play.sh` | roda `.pc`, `.wine`, `.wtgz` ou `.wsquashfs` fora do Batocera |
+| `test.sh` | checagem dos dois (detecção, parser, CRLF, nativo, cache) |
+
+Variáveis que o `play.sh` respeita: `WINE` (binário), `WINEPREFIX`, `WINEARCH`,
+`FORCE_WINE=1` (ignora build nativo),
+`WINE_GAMES` (onde extrair arquivo único).
