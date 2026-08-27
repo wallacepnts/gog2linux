@@ -5,6 +5,7 @@
 #   play.sh gets a fake "wine" that prints cwd, prefix, env and arguments.
 set -euo pipefail
 exec </dev/null          # build.sh only offers the menu entry on a tty
+export GOG2LINUX_LANG=en # assertions below are in English
 here=$(dirname "$(readlink -f "$0")")
 tmp=$(mktemp -d); tmp=$(cd "$tmp" && pwd -P); trap 'rm -rf "$tmp"' EXIT
 printf '#!/bin/sh\necho "$PWD|$WINEPREFIX|$WINEDLLOVERRIDES|$*"\n' > "$tmp/fakewine"
@@ -179,6 +180,10 @@ XDG_DATA_HOME="$tmp/xdg" "$here/build.sh" --desktop "$tmp/gone.pc" >/dev/null
 XDG_DATA_HOME="$tmp/xdg" "$tmp/gone.pc/uninstall.sh" -y >/dev/null
 [ ! -d "$tmp/gone.pc" ] || { echo "FAILED: folder survived"; exit 1; }
 [ ! -e "$tmp/xdg/applications/gog-gone.desktop" ] || { echo "FAILED: menu entry survived"; exit 1; }
+
+# the same run speaks Portuguese when asked to
+has ptbr "$(GOG2LINUX_LANG=pt "$here/build.sh" "$tmp/multi.pc")" "pronto:"
+has ptbr-others "$(GOG2LINUX_LANG=pt "$here/build.sh" "$tmp/multi.pc")" "outras entradas"
 
 # plain Windows game: writes autorun.cmd
 mkdir -p "$tmp/win.pc"; touch "$tmp/win.pc/game.exe"

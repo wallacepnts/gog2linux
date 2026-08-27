@@ -220,6 +220,24 @@ Troque o `%APP%` do arquivo pelo caminho do lado Windows antes — `Z:\userdata\
 
 ---
 
+## Idioma da própria ferramenta
+
+O `build.sh` e o `uninstall.sh` falam inglês ou português, conforme o `$LANG`:
+
+```bash
+GOG2LINUX_LANG=pt ./build.sh Jogo.pc "/caminho/setup.exe"   # força português
+GOG2LINUX_LANG=en ./build.sh Jogo.pc "/caminho/setup.exe"   # força inglês
+```
+
+O que não casar com `pt*` recebe inglês. Não há gettext nem arquivo `.po` — são
+dois blocos de variáveis de shell, escolhidos uma vez na partida. Os scripts que
+só imprimem erro (`play.sh`, `saves.sh`) seguem em inglês.
+
+Repare que isto é o idioma das **mensagens**, não do jogo: aquele é o `--lang`,
+e os dois são independentes.
+
+---
+
 ## Colocando o jogo no menu do desktop
 
 Ao terminar de empacotar, o `build.sh` oferece criar a entrada de menu:

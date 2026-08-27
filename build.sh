@@ -8,6 +8,72 @@ shopt -s dotglob nullglob
 
 die() { echo "$*" >&2; exit 1; }
 
+# Messages in the two languages this is used in. Picked from $LANG; force with
+# GOG2LINUX_LANG=pt or =en. No gettext, no .po files, no runtime dependency.
+case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
+  pt*)
+    M_USAGE="uso: %s [--desktop|--no-desktop] [--lang CODIGO|all] Jogo.pc setup.exe [dlc.exe ...]\n"
+    M_NO_INNO="falta o innoextract: instale o pacote innoextract (apt/dnf/pacman/zypper)"
+    M_NO_PY="falta o python3: instale o pacote python3"
+    M_NOT_DEST="o primeiro argumento e a pasta de destino, nao o instalador"
+    M_NO_SETUP="instalador nao encontrado: %s\n"
+    M_OFFERS="%s oferece %s idiomas:\n"
+    M_ASK_LANG="Idioma [%s]: "
+    M_LANG="idioma: %s\n"
+    M_META="nao consegui ler os metadados da GOG (veja o erro do python acima)"
+    M_NO_EXE="nao achei o executavel do jogo em %s\n"
+    M_EXTRACTED="extraido: %s\n"
+    M_WARN_KIND="ATENCAO: este e um jogo %s disfarcado. NAO passe pelo wine.\n"
+    M_HERE="  aqui:"
+    M_BATOCERA="  Batocera:"
+    M_DOS_PKG="instale o pacote dosbox, depois:"
+    M_DOS_BATO="/userdata/roms/dos/  (nome <=8 caracteres, com dosbox.bat; nao copie o .conf da GOG)"
+    M_SCUMM_PKG="instale o pacote scummvm"
+    M_SCUMM_BATO="/userdata/roms/scummvm/"
+    M_NO_AUTORUN="Nenhum autorun.cmd gerado - seria inutil. Veja o README."
+    M_DONE="pronto: %s (CMD=%s)\n"
+    M_REG="obs: gog-registry.reg gerado; o play.sh aplica ao criar o prefixo"
+    M_WRAPPERS="obs: wrappers do jogo tem prioridade sobre os do wine: %s\n"
+    M_OTHERS="outras entradas no goggame-*.info: %s\n"
+    M_OTHERS2="  se o jogo nao abrir, tente uma delas no autorun.cmd"
+    M_NATIVE="obs: tem build Linux nativo aqui -> ./%s/%s (sem wine)\n"
+    M_ASK_MENU='Adicionar "%s" ao menu de jogos? [s/N] '
+    M_YES="sSyY"
+    M_ENTRY="entrada de menu: %s\n"
+    ;;
+  *)
+    M_USAGE="usage: %s [--desktop|--no-desktop] [--lang CODE|all] Game.pc setup.exe [dlc.exe ...]\n"
+    M_NO_INNO="innoextract is missing: install the innoextract package (apt/dnf/pacman/zypper)"
+    M_NO_PY="python3 is missing: install the python3 package"
+    M_NOT_DEST="first argument is the destination folder, not the installer"
+    M_NO_SETUP="installer not found: %s\n"
+    M_OFFERS="%s offers %s languages:\n"
+    M_ASK_LANG="Language [%s]: "
+    M_LANG="language: %s\n"
+    M_META="could not read the GOG metadata (see the python error above)"
+    M_NO_EXE="could not find the game executable in %s\n"
+    M_EXTRACTED="extracted: %s\n"
+    M_WARN_KIND="WARNING: this is a %s game in disguise. Do NOT run it through wine.\n"
+    M_HERE="  here:"
+    M_BATOCERA="  Batocera:"
+    M_DOS_PKG="install the dosbox package, then:"
+    M_DOS_BATO="/userdata/roms/dos/  (name <=8 chars, with dosbox.bat; don't copy GOG's .conf)"
+    M_SCUMM_PKG="install the scummvm package"
+    M_SCUMM_BATO="/userdata/roms/scummvm/"
+    M_NO_AUTORUN="No autorun.cmd written - it would be useless. See the README."
+    M_DONE="done: %s (CMD=%s)\n"
+    M_REG="note: gog-registry.reg written; play.sh applies it when it creates the prefix"
+    M_WRAPPERS="note: bundled wrappers given priority over wine's own: %s\n"
+    M_OTHERS="other entries in goggame-*.info: %s\n"
+    M_OTHERS2="  if the game won't start, try one of those in autorun.cmd"
+    M_NATIVE="note: native Linux build here -> ./%s/%s (no wine)\n"
+    M_ASK_MENU='Add "%s" to the desktop games menu? [y/N] '
+    M_YES="yY"
+    M_ENTRY="menu entry: %s\n"
+    ;;
+esac
+
+
 desktop=ask
 lang=auto
 while [ $# -gt 0 ]; do
@@ -20,20 +86,20 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-[ $# -ge 1 ] || die "usage: $0 [--desktop|--no-desktop] [--lang CODE|all] Game.pc setup.exe [dlc.exe ...]"
+[ $# -ge 1 ] || die "$(printf "$M_USAGE" "$0")"
 command -v innoextract >/dev/null ||
-  die "innoextract is missing: install the innoextract package (apt/dnf/pacman/zypper)"
-command -v python3 >/dev/null || die "python3 is missing: install the python3 package"
+  die "$M_NO_INNO"
+command -v python3 >/dev/null || die "$M_NO_PY"
 
 target=$(readlink -f "$1"); shift
 
 # a forgotten destination turns the installer into $1 and mkdir fails cryptically
-[ -f "$target" ] && die "first argument is the destination folder, not the installer
-usage: $0 Game.pc setup.exe [dlc.exe ...]"
+[ -f "$target" ] && die "$M_NOT_DEST
+$(printf "$M_USAGE" "$0")"
 
 # check everything before extracting: failing halfway leaves a half-built folder
 for setup in "$@"; do
-  [ -f "$setup" ] || die "installer not found: $setup"
+  [ -f "$setup" ] || die "$(printf "$M_NO_SETUP" "$setup")"
 done
 
 mkdir -p "$target"
@@ -50,9 +116,9 @@ if [ $# -gt 0 ]; then
 
       # more than one language and someone watching: let them pick
       if [ "$count" -gt 1 ] && [ -t 0 ]; then
-        echo "$(basename "$setup") offers $count languages:"
+        printf "$M_OFFERS" "$(basename "$setup")" "$count"
         printf '%s\n' "$offered" | nl -w4 -s') '
-        printf 'Language [%s]: ' "${pick:-1}"
+        printf "$M_ASK_LANG" "${pick:-1}"
         read -r answer
         case "$answer" in
           '') ;;
@@ -64,7 +130,7 @@ if [ $# -gt 0 ]; then
       [ -n "$pick" ] && lang=$pick
     fi
     opts=()
-    [ -n "$pick" ] && [ "$pick" != all ] && opts+=(--language "$pick") && echo "language: $pick"
+    [ -n "$pick" ] && [ "$pick" != all ] && opts+=(--language "$pick") && printf "$M_LANG" "$pick"
     innoextract --gog --silent --collisions=overwrite "${opts[@]}" -d "$target" "$setup"
   done
   # installer scaffolding. Only after extracting: in reclassify mode that tmp/
@@ -177,7 +243,7 @@ print(chosen)
 print(';'.join(sorted({p for _, _, p in tasks if p != chosen})))
 print(name)
 PYMETA
-) || die "python3 is required to read the GOG metadata"
+) || die "$M_META"
 
 exe=$(printf '%s\n' "$meta" | sed -n 1p)
 others=$(printf '%s\n' "$meta" | sed -n 2p)
@@ -217,24 +283,24 @@ else
 fi
 
 if [ -n "$kind" ]; then
-  echo "extracted: $target"
+  printf "$M_EXTRACTED" "$target"
   echo
-  echo "WARNING: this is a $kind game in disguise. Do NOT run it through wine."
+  printf "$M_WARN_KIND" "$kind"
   if [ "$kind" = dos ]; then
-    echo "  here:     install the dosbox package, then:"
+    echo "$M_HERE     $M_DOS_PKG"
     echo "            cd $(basename "$target") && dosbox -conf dosbox_*.conf -conf dosbox_*_single.conf"
-    echo "  Batocera: /userdata/roms/dos/  (name <=8 chars, with dosbox.bat; don't copy GOG's .conf)"
+    echo "$M_BATOCERA $M_DOS_BATO"
   else
-    echo "  here:     install the scummvm package"
-    echo "  Batocera: /userdata/roms/scummvm/"
+    echo "$M_HERE     $M_SCUMM_PKG"
+    echo "$M_BATOCERA $M_SCUMM_BATO"
   fi
   echo
-  echo "No autorun.cmd written - it would be useless. See the README."
+  echo "$M_NO_AUTORUN"
   exit 0
 fi
 
 if [ -z "$exe" ] || [ ! -e "$target/$exe" ]; then
-  die "could not find the game executable in $target"
+  die "$(printf "$M_NO_EXE" "$target")"
 fi
 case "$exe" in *\ *) exe="\"$exe\"" ;; esac
 
@@ -257,14 +323,14 @@ done
 } > "$target/autorun.cmd"
 here=$(dirname "$(readlink -f "$0")")
 cp "$here/play.sh" "$here/uninstall.sh" "$here/saves.sh" "$target/"
-echo "done: $target (CMD=$exe)"
-[ -n "$wrappers" ] && echo "note: bundled wrappers given priority over wine's own: $wrappers"
+printf "$M_DONE" "$target" "$exe"
+[ -n "$wrappers" ] && printf "$M_WRAPPERS" "$wrappers"
 if [ -f "$target/gog-registry.reg" ]; then
-  echo "note: gog-registry.reg written; play.sh applies it when it creates the prefix"
+  echo "$M_REG"
 fi
 if [ -n "$others" ]; then
-  echo "other entries in goggame-*.info: ${others//;/, }"
-  echo "  if the game won't start, try one of those in autorun.cmd"
+  printf "$M_OTHERS" "${others//;/, }"
+  echo "$M_OTHERS2"
 fi
 
 # Ren'Py and friends: the Windows installer usually carries the Linux build too.
@@ -275,16 +341,16 @@ if compgen -G "$target/lib/*linux*" >/dev/null; then
     [ "$native" = play.sh ] && continue
     # a Windows installer does not carry the execute bit
     chmod +x "$candidate" "$target"/lib/*linux*/* 2>/dev/null || true
-    echo "note: native Linux build here -> ./$(basename "$target")/$native (no wine)"
+    printf "$M_NATIVE" "$(basename "$target")" "$native"
     break
   done
 fi
 
 # A .desktop entry is all KDE, GNOME and XFCE need; no per-desktop code.
 if [ "$desktop" = ask ] && [ -t 0 ]; then
-  printf 'Add "%s" to the desktop games menu? [y/N] ' "$name"
+  printf "$M_ASK_MENU" "$name"
   read -r answer
-  case "$answer" in [yYsS]*) desktop=yes ;; *) desktop=no ;; esac
+  case "$answer" in ["$M_YES"]*) desktop=yes ;; *) desktop=no ;; esac
 fi
 
 if [ "$desktop" = yes ]; then
@@ -327,5 +393,5 @@ PYICON
 
 
   command -v update-desktop-database >/dev/null && update-desktop-database "$apps" 2>/dev/null
-  echo "menu entry: $entry"
+  printf "$M_ENTRY" "$entry"
 fi
