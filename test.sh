@@ -207,6 +207,24 @@ XDG_DATA_HOME="$tmp/xdg" "$here/build.sh" --desktop "$tmp/ico.pc" >/dev/null
 has icon-alt "$(cat "$tmp/xdg/applications/gog-ico.desktop")" "Icon=$tmp/ico.pc/icon.png"
 eq icon-named "$(cat "$tmp/ico.pc/icon.png")" "$(printf '\x89PNGnox')"
 
+# every game listed in ENGINES.md must be recognised by build.sh, or the doc and
+# the script have drifted apart
+missing=""
+while IFS='|' read -r _ games engine _; do
+  game=$(printf '%s' "$games" | cut -d, -f1 | sed 's/^ *//; s/ *$//')
+  [ -n "$game" ] || continue
+  case "$game" in Game|Games|---*|"") continue ;; esac
+  rm -rf "$tmp/eng.pc"; mkdir -p "$tmp/eng.pc"; touch "$tmp/eng.pc/Game.exe"
+  printf '{"name":"%s","playTasks":[{"category":"game","path":"Game.exe"}]}' "$game" > "$tmp/eng.pc/goggame-1.info"
+  case "$("$here/build.sh" "$tmp/eng.pc")" in
+    *"reimplemented engine"*) ;;
+    *) missing="$missing$game; " ;;
+  esac
+# the "Whole catalogues" section is out of scope: ScummVM games are recognised
+# by the files in the installer, never by their name
+done < <(sed '/^## Whole catalogues/,$d' "$here/.github/ENGINES.md" | grep '^| ')
+[ -z "$missing" ] || { echo "FAILED: ENGINES.md lists games build.sh ignores: $missing"; exit 1; }
+
 # a classic with an open engine gets a heads-up, not a decision
 mkdir -p "$tmp/morrowind.pc"; touch "$tmp/morrowind.pc/Game.exe"
 has port-note "$("$here/build.sh" "$tmp/morrowind.pc")" "OpenMW"

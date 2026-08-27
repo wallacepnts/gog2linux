@@ -15,10 +15,10 @@ installer with `build.sh` as usual, then point the engine at the `.pc` folder
 instead of running `play.sh`. Drop a `launch.sh` in that folder and the desktop
 entry follows it automatically; see the README.
 
-`build.sh` recognises a subset of this list and prints a note when it does. The
-tables below are the fuller reference. A far larger catalogue, covering consoles
-too, lives at the [Emulation General Wiki][egw] — worth checking for anything
-missing here.
+`build.sh` recognises every game named below and prints a note when it packages
+one — a test keeps the script and this page from drifting apart. A far larger
+catalogue, covering consoles too, lives at the [Emulation General Wiki][egw];
+this page is the subset that matters for GOG on Linux.
 
 [egw]: https://emulation.gametechwiki.com/index.php/Game_engine_recreations_and_source_ports
 
@@ -77,12 +77,12 @@ missing here.
 | Jagged Alliance 2 | ja2-stracciatella | <https://github.com/ja2-stracciatella/ja2-stracciatella> |
 | Master of Orion 2 | 1oom | <https://gitlab.com/KilgoreTroutMaskReplicant/1oom> |
 | Pharaoh | Ozymandias | <https://github.com/Keriew/ozymandias> |
+| StarCraft | Stargus | <https://github.com/Wargus/stargus> |
 | Syndicate | FreeSynd | <https://freesynd.sourceforge.io> |
 | The Settlers II | Return to the Roots | <https://www.siedler25.org> |
 | Theme Hospital | CorsixTH | <https://corsixth.com> |
 | Transport Tycoon Deluxe | OpenTTD | <https://www.openttd.org> |
 | Warcraft II | Wargus | <https://wargus.github.io> |
-| StarCraft | Stargus | <https://github.com/Wargus/stargus> |
 | X-COM: UFO Defense, Terror from the Deep | OpenXcom | <https://openxcom.org> |
 
 ## Adventure and action
@@ -109,7 +109,9 @@ missing here.
 | Infocom text adventures | Frotz, Gargoyle | <https://ccxvii.net/gargoyle> |
 
 `build.sh` already detects ScummVM games from the installer and tells you to use
-the `scummvm` system rather than wine — the same holds on the desktop.
+the `scummvm` system rather than wine — the same holds on the desktop. That
+detection reads the files, not the title, which is why this last section is the
+only one `build.sh` does not match by name.
 
 ---
 
