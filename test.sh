@@ -15,6 +15,10 @@ has() { case "$2" in *"$3"*) ;; *) echo "FAILED $1:"; echo "  output:   $2"; ech
 
 ## build.sh
 
+# destination omitted: the installer lands in $1 and mkdir would fail cryptically
+touch "$tmp/setup.exe"
+! "$here/build.sh" "$tmp/setup.exe" >/dev/null 2>&1 || { echo "FAILED: accepted a file as destination"; exit 1; }
+
 # DOSBox game in disguise: warns and writes no autorun.cmd
 mkdir -p "$tmp/dos.pc/DOSBOX"
 has dos "$("$here/build.sh" "$tmp/dos.pc")" "dos game in disguise"

@@ -14,6 +14,10 @@ command -v innoextract >/dev/null ||
 
 target=$(readlink -f "$1"); shift
 
+# a forgotten destination turns the installer into $1 and mkdir fails cryptically
+[ -f "$target" ] && die "first argument is the destination folder, not the installer
+usage: $0 Game.pc setup.exe [dlc.exe ...]"
+
 # check everything before extracting: failing halfway leaves a half-built folder
 for setup in "$@"; do
   [ -f "$setup" ] || die "installer not found: $setup"
