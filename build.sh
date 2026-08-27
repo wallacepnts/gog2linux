@@ -65,7 +65,7 @@ fi
 # GOG metadata: which exe to launch, what else it offers, and the registry the
 # installer would have written. Needs real JSON, hence python3.
 meta=$(python3 - "$target" <<'PYMETA'
-import glob, json, os, sys
+import base64, glob, json, os, sys
 
 target = sys.argv[1]
 ROOTS = {'HKLM': 'HKEY_LOCAL_MACHINE', 'HKCU': 'HKEY_CURRENT_USER',
@@ -110,6 +110,11 @@ def dword(data):
 def value(kind, data):
     if kind == 'dword':
         return 'dword:%08x' % dword(data)
+    if kind == 'binary':
+        # GOG stores REG_BINARY base64-encoded; writing it as text is what makes
+        # a game read its own settings as garbage and call them damaged
+        raw = base64.b64decode(str(data), validate=True)
+        return 'hex:' + ','.join('%02x' % b for b in raw)
     text = str(data).replace('{app}', '%APP%').replace('\\', '\\\\').replace('"', '\\"')
     return '"%s"' % text
 

@@ -86,12 +86,15 @@ cat > "$tmp/dw.pc/goggame-1.script" <<'SCRIPT'
  {"languages":["*"],"install":{"action":"setRegistry","arguments":{
    "root":"HKCU","subkey":"Software\\x","valueName":"Pascal","valueData":"$0000002a","valueType":"dword"}}},
  {"languages":["*"],"install":{"action":"setRegistry","arguments":{
-   "root":"HKCU","subkey":"Software\\x","valueName":"Junk","valueData":"not a number","valueType":"dword"}}}
+   "root":"HKCU","subkey":"Software\\x","valueName":"Junk","valueData":"not a number","valueType":"dword"}}},
+ {"languages":["*"],"install":{"action":"setRegistry","arguments":{
+   "root":"HKCU","subkey":"Software\\x","valueName":"Bin","valueData":"QUJD","valueType":"binary"}}}
 ]}
 SCRIPT
 "$here/build.sh" "$tmp/dw.pc" >/dev/null
 dw=$(cat "$tmp/dw.pc/gog-registry.reg")
 has dword-pascal "$dw" '"Pascal"=dword:0000002a'
+has binary-hex   "$dw" '"Bin"=hex:41,42,43'
 case "$dw" in *Junk*) echo "FAILED: kept a value it cannot parse"; exit 1 ;; esac
 
 # play.sh applies that .reg when it creates the prefix, with %APP% resolved
