@@ -187,6 +187,17 @@ XDG_DATA_HOME="$tmp/xdg" "$tmp/gone.pc/uninstall.sh" -y >/dev/null
 has ptbr "$(GOG2LINUX_LANG=pt "$here/build.sh" "$tmp/multi.pc")" "pronto:"
 has ptbr-others "$(GOG2LINUX_LANG=pt "$here/build.sh" "$tmp/multi.pc")" "outras entradas"
 
+# an icon that is not called goggame-*.ico still counts
+mkdir -p "$tmp/ico.pc"; touch "$tmp/ico.pc/Game.exe"
+python3 - "$tmp/ico.pc/gog.ico" <<'ICO'
+import struct, sys
+big = b'\x89PNG' + b'nox'
+open(sys.argv[1], 'wb').write(
+    struct.pack('<HHH', 0, 1, 1) + struct.pack('<BBBBHHII', 0, 0, 0, 0, 1, 32, len(big), 22) + big)
+ICO
+XDG_DATA_HOME="$tmp/xdg" "$here/build.sh" --desktop "$tmp/ico.pc" >/dev/null
+has icon-alt "$(cat "$tmp/xdg/applications/gog-ico.desktop")" "Icon=$tmp/ico.pc/icon.png"
+
 # GOG's ddraw wrapper ships windowed; packaging flips it to fullscreen
 mkdir -p "$tmp/dx.pc"; touch "$tmp/dx.pc/Game.exe"
 printf '[dxcfg]\ndisplay=desktop\npresentation=windowed\nscaling=fit\n' > "$tmp/dx.pc/dxcfg.ini"
@@ -233,6 +244,10 @@ run "$tmp/g.pc/play.sh" "$tmp/g.wtgz" >/dev/null
 head -c 200 /dev/urandom > "$tmp/corrupt.wtgz"
 ! run "$tmp/g.pc/play.sh" "$tmp/corrupt.wtgz" >/dev/null 2>&1 || { echo "FAILED: exited 0 on a corrupt wtgz"; exit 1; }
 [ ! -d "$tmp/cache/corrupt" ] || { echo "FAILED: aborted extraction became cache"; exit 1; }
+
+# WINE_DESKTOP wraps the game in a virtual desktop of that size
+has desktop-wrap "$(WINE_DESKTOP=1024x768 run "$tmp/n.pc/play.sh" "$tmp/n.pc" "game.exe")" \
+                 "explorer /desktop=n.pc,1024x768 game.exe"
 
 # a second argument overrides CMD (launcher, editor) and skips the native build
 eq override "$(run "$tmp/n.pc/play.sh" "$tmp/n.pc" "Other Game.exe" --windowed)" \

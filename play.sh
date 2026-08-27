@@ -144,4 +144,12 @@ fi
 [ -n "$GAMELANG" ] && export LC_ALL="$GAMELANG"
 
 cd "$target/$DIR"
+
+# Old games ask for a 640x480 fullscreen mode wine cannot really set, so they
+# paint a small picture in the corner of a big black window. Wrapping them in a
+# virtual desktop of that exact size gives an honest window instead.
+if [ -n "${WINE_DESKTOP:-}" ]; then
+  eval exec "${WINE:-wine}" explorer "/desktop=${target##*/},$WINE_DESKTOP" "$CMD"
+fi
+
 eval exec "${WINE:-wine}" "$CMD"   # eval because CMD carries quotes and arguments

@@ -279,7 +279,11 @@ PYMETA
 exe=$(printf '%s\n' "$meta" | sed -n 1p)
 others=$(printf '%s\n' "$meta" | sed -n 2p)
 name=$(printf '%s\n' "$meta" | sed -n 3p)
-[ -n "$name" ] || name=$(basename "${target%.pc}")
+# no metadata: the folder name, with the first letter raised
+if [ -z "$name" ]; then
+  name=$(basename "${target%.pc}")
+  name="$(printf '%s' "${name:0:1}" | tr '[:lower:]' '[:upper:]')${name:1}"
+fi
 
 # no .info: first .exe at the root that isn't an accessory
 if [ -z "$exe" ]; then
@@ -401,7 +405,10 @@ if [ "$desktop" = yes ]; then
 import glob, os, struct, sys
 
 target = sys.argv[1]
-found = glob.glob(os.path.join(target, 'goggame-*.ico'))
+# not every release names it goggame-*.ico; Nox ships gog.ico
+found = (glob.glob(os.path.join(target, 'goggame-*.ico'))
+         or glob.glob(os.path.join(target, 'gog*.ico'))
+         or sorted(glob.glob(os.path.join(target, '*.ico'))))
 if found:
     blob = open(found[0], 'rb').read()
     best = (0, None)
