@@ -25,6 +25,11 @@ handhelds too; this page keeps the PC entries a GOG library can actually use.
 Two flags carry over from there: *work in progress* means playable but rough or
 incomplete, and *dormant* means it works yet nobody maintains it.
 
+A few games appear twice, with rival engines. That is not indecision: dsda-doom
+is exact where GZDoom is generous, VoidSW is dedicated where Raze is broad, and
+UZDoom is a live fork of GZDoom whose advantage over the original is not settled
+yet. `build.sh` names one of them; the table shows the others.
+
 [egw]: https://emulation.gametechwiki.com/index.php/Game_engine_recreations_and_source_ports
 
 ---
@@ -41,6 +46,7 @@ incomplete, and *dormant* means it works yet nobody maintains it.
 | Deus Ex | Surreal 98 *(work in progress)* | <https://github.com/HKRepublic/Deus-Ex-Surreal-98> |
 | Doom 64 | Doom64 EX Plus | <https://github.com/atsb/Doom64EX-Plus> |
 | Doom, Doom II, Final Doom, Heretic, Strife | GZDoom | <https://zdoom.org> |
+| Doom, Doom II, Final Doom, Heretic, Strife | UZDoom | <https://github.com/UZDoom/UZDoom> |
 | Duke Nukem 3D | EDuke32 | <https://eduke32.com> |
 | Half-Life and GoldSrc games | Xash3D FWGS | <https://github.com/FWGS/xash3d-fwgs> |
 | Hexen | GZDoom | <https://zdoom.org> |
