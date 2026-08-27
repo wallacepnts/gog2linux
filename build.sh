@@ -100,6 +100,20 @@ for wanted in (lambda c, p: c == 'game', lambda c, p: p, lambda c, p: True):
     if chosen:
         break
 
+def dword(data):
+    text = str(data).strip()
+    if text.startswith('$'):      # Inno writes hex the Pascal way
+        return int(text[1:], 16)
+    return int(text, 0)
+
+
+def value(kind, data):
+    if kind == 'dword':
+        return 'dword:%08x' % dword(data)
+    text = str(data).replace('{app}', '%APP%').replace('\\', '\\\\').replace('"', '\\"')
+    return '"%s"' % text
+
+
 keys = {}
 for d in load('goggame-*.script'):
     for action in d.get('actions') or []:
@@ -114,14 +128,12 @@ for d in load('goggame-*.script'):
             continue
         entries = keys.setdefault(root + '\\' + args.get('subkey', ''), [])
         if args.get('valueName'):
-            entries.append((args['valueName'], args.get('valueType') or 'string', args.get('valueData')))
-
-
-def value(kind, data):
-    if kind == 'dword':
-        return 'dword:%08x' % int(str(data), 0)
-    text = str(data).replace('{app}', '%APP%').replace('\\', '\\\\').replace('"', '\\"')
-    return '"%s"' % text
+            kind = args.get('valueType') or 'string'
+            try:                  # a value we cannot read is worth skipping, not crashing over
+                value(kind, args.get('valueData'))
+            except (TypeError, ValueError):
+                continue
+            entries.append((args['valueName'], kind, args.get('valueData')))
 
 
 if keys:

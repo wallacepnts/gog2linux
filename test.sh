@@ -78,6 +78,22 @@ has reg-path "$reg" '"InstallPath"="%APP%"'
 has reg-wow "$reg" 'HKEY_LOCAL_MACHINE\Software\WOW6432Node\id'
 case "$reg" in *ita*) echo "FAILED reg-lang: kept an it-IT action in an en-US copy"; exit 1 ;; esac
 
+# Inno writes hex the Pascal way; an unreadable value is skipped, not fatal
+mkdir -p "$tmp/dw.pc"; touch "$tmp/dw.pc/Game.exe"
+printf '{"languages":["en-US"],"playTasks":[{"category":"game","path":"Game.exe"}]}' > "$tmp/dw.pc/goggame-1.info"
+cat > "$tmp/dw.pc/goggame-1.script" <<'SCRIPT'
+{"actions":[
+ {"languages":["*"],"install":{"action":"setRegistry","arguments":{
+   "root":"HKCU","subkey":"Software\\x","valueName":"Pascal","valueData":"$0000002a","valueType":"dword"}}},
+ {"languages":["*"],"install":{"action":"setRegistry","arguments":{
+   "root":"HKCU","subkey":"Software\\x","valueName":"Junk","valueData":"not a number","valueType":"dword"}}}
+]}
+SCRIPT
+"$here/build.sh" "$tmp/dw.pc" >/dev/null
+dw=$(cat "$tmp/dw.pc/gog-registry.reg")
+has dword-pascal "$dw" '"Pascal"=dword:0000002a'
+case "$dw" in *Junk*) echo "FAILED: kept a value it cannot parse"; exit 1 ;; esac
+
 # play.sh applies that .reg when it creates the prefix, with %APP% resolved
 cp "$here/play.sh" "$tmp/reg.pc/"
 out=$(run "$tmp/reg.pc/play.sh")
