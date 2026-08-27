@@ -246,8 +246,8 @@ wrappers=
 for candidate in "$target"/*.dll; do
   case "${candidate##*/}" in
     ddraw.dll|d3d8.dll|d3d9.dll|dinput.dll|dinput8.dll|dsound.dll|xinput1_[1-4].dll)
-      name=${candidate##*/}
-      wrappers="${wrappers:+$wrappers,}${name%.dll}" ;;
+      dll=${candidate##*/}
+      wrappers="${wrappers:+$wrappers,}${dll%.dll}" ;;
   esac
 done
 

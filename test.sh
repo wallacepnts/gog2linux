@@ -110,7 +110,8 @@ esc=$(printf '%s' "$tmp/reg.pc" | sed 's|/|\\\\|g')
 has reg-path "$(WINE="$tmp/dumpwine" "$tmp/reg.pc/play.sh" 2>/dev/null)" "\"InstallPath\"=\"Z:$esc\""
 
 # --desktop writes a freedesktop entry, with the GOG icon when there is one
-mkdir -p "$tmp/menu.pc"; touch "$tmp/menu.pc/Game.exe"
+# the wrapper scan must not clobber the game name used by the menu entry
+mkdir -p "$tmp/menu.pc"; touch "$tmp/menu.pc/Game.exe" "$tmp/menu.pc/ddraw.dll"
 python3 - "$tmp/menu.pc/goggame-9.ico" <<'ICO'
 import struct, sys
 # two entries, 16x16 and 256x256, both PNG-compressed like GOG ships them
