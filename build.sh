@@ -44,7 +44,24 @@ if [ $# -gt 0 ]; then
     # one wins the metadata -- which is how an English game ends up Italian.
     pick=$lang
     if [ "$lang" = auto ]; then
-      pick=$(innoextract --list-languages "$setup" 2>/dev/null | awk '/^ - en/{print $2; exit}') || true
+      offered=$(innoextract --list-languages "$setup" 2>/dev/null | awk '/^ - /{print $2}') || true
+      pick=$(printf '%s\n' "$offered" | awk '/^en/{print; exit}')
+      count=$(printf '%s\n' "$offered" | grep -c .) || true
+
+      # more than one language and someone watching: let them pick
+      if [ "$count" -gt 1 ] && [ -t 0 ]; then
+        echo "$(basename "$setup") offers $count languages:"
+        printf '%s\n' "$offered" | nl -w4 -s') '
+        printf 'Language [%s]: ' "${pick:-1}"
+        read -r answer
+        case "$answer" in
+          '') ;;
+          *[!0-9]*) pick=$answer ;;
+          *) pick=$(printf '%s\n' "$offered" | sed -n "${answer}p") ;;
+        esac
+      fi
+      # chosen once, reused for the DLCs that follow
+      [ -n "$pick" ] && lang=$pick
     fi
     opts=()
     [ -n "$pick" ] && [ "$pick" != all ] && opts+=(--language "$pick") && echo "language: $pick"

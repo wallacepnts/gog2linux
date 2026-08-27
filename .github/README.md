@@ -66,11 +66,22 @@ writing `autorun.cmd` and tells you which system to use instead.
    `--gog` pulls them together on its own — the `.bin` files only need to sit in
    the same folder.
 3. **A DLC is just one more argument**, in order: base first, DLCs after.
-4. **Multi-language installers default to English.** GOG ships one installer
-   with every language inside; extracting all of them lets the last one win the
-   metadata, which is how an English game comes out Italian. `build.sh` asks the
-   installer what it offers and picks `en-*` when it is there. Override with
-   `--lang it-IT`, or keep every language with `--lang all`.
+4. **Multi-language installers ask, and default to English.** GOG ships one
+   installer with every language inside; extracting all of them lets the last
+   one win the metadata, which is how an English game comes out Italian. When
+   the installer offers more than one language, `build.sh` lists them and waits:
+
+   ```
+   setup_final_fantasy_iii.exe offers 10 languages:
+      1) de-DE
+      2) en-US
+      ...
+   Language [en-US]:
+   ```
+
+   Enter takes English. The choice carries over to the DLCs in the same run. In
+   a script there is no question: pass `--lang it-IT`, or `--lang all` to keep
+   every language, and with neither it picks `en-*` silently.
 5. **Copy the whole folder** to Batocera, minus `.prefix/` (that's the local
    prefix, ~400 MB, and Batocera doesn't use it).
 6. **Keep `/userdata/` on btrfs or ext4.** NTFS breaks wine, Steam/Galaxy games

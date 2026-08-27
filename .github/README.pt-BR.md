@@ -65,11 +65,22 @@ antes de gerar o `autorun.cmd` e diz qual sistema usar.
    `setup_jogo.exe` + `setup_jogo-1.bin` + `setup_jogo-2.bin`. O `--gog` do
    innoextract junta tudo sozinho — os `.bin` só precisam estar na mesma pasta.
 3. **DLC é só mais um argumento**, na ordem: base primeiro, DLCs depois.
-4. **Instalador multi-idioma sai em inglês.** A GOG entrega um instalador só,
-   com todos os idiomas dentro; extrair tudo faz o último vencer os metadados —
-   é assim que um jogo em inglês termina em italiano. O `build.sh` pergunta ao
-   instalador o que ele oferece e escolhe `en-*` quando existe. Troque com
-   `--lang it-IT`, ou guarde todos com `--lang all`.
+4. **Instalador multi-idioma pergunta, e assume inglês.** A GOG entrega um
+   instalador só, com todos os idiomas dentro; extrair tudo faz o último vencer
+   os metadados — é assim que um jogo em inglês termina em italiano. Quando o
+   instalador oferece mais de um idioma, o `build.sh` lista e espera:
+
+   ```
+   setup_final_fantasy_iii.exe offers 10 languages:
+      1) de-DE
+      2) en-US
+      ...
+   Language [en-US]:
+   ```
+
+   Enter aceita o inglês. A escolha vale também para as DLCs da mesma execução.
+   Em script não há pergunta: passe `--lang it-IT`, ou `--lang all` para guardar
+   todos; sem nenhum dos dois ele escolhe `en-*` calado.
 5. **Copie a pasta inteira** pro Batocera, sem o `.prefix/` (é o prefixo local,
    pesa uns 400 MB e o Batocera não usa).
 6. **`/userdata/` em btrfs ou ext4.** NTFS quebra wine, principalmente jogos
