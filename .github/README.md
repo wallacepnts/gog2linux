@@ -247,21 +247,20 @@ The question only appears on a terminal. For scripts, decide up front:
 ./build.sh --no-desktop Game.pc "/path/setup.exe"    # never ask
 ```
 
-Two entries are written, the way GOG does it on Windows: the game, and
-**Uninstall &lt;game&gt;**. The uninstaller is `uninstall.sh` inside the folder, so it
-works from a terminal too:
+Only the game gets an entry. Removing it is `uninstall.sh`, which sits in the
+folder rather than cluttering the games menu:
 
 ```bash
 ./Game.pc/uninstall.sh        # lists what goes, then asks
 ./Game.pc/uninstall.sh -y     # no question
 ```
 
-It takes the folder, the wine prefix inside it and both menu entries. Saves the
+It takes the folder, the wine prefix inside it and the menu entry. Saves the
 game wrote elsewhere are left alone.
 
-The entries point at the `.pc` folder by absolute path, so move the folder and
-they break — rerun `./build.sh --desktop Game.pc` from the new place to fix
-them, or delete `~/.local/share/applications/gog-<name>*.desktop`.
+The entry points at the `.pc` folder by absolute path, so move the folder and it
+breaks — rerun `./build.sh --desktop Game.pc` from the new place to fix it, or
+delete `~/.local/share/applications/gog-<name>.desktop`.
 
 ---
 

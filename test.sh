@@ -146,11 +146,10 @@ mkdir -p "$tmp/gone.pc"; touch "$tmp/gone.pc/Game.exe"
 printf '{"name":"Gone","playTasks":[{"category":"game","path":"Game.exe"}]}' > "$tmp/gone.pc/goggame-9.info"
 XDG_DATA_HOME="$tmp/xdg" "$here/build.sh" --desktop "$tmp/gone.pc" >/dev/null
 [ -x "$tmp/gone.pc/uninstall.sh" ] || { echo "FAILED: no uninstall.sh copied"; exit 1; }
-has uninstall-entry "$(cat "$tmp/xdg/applications/gog-gone-uninstall.desktop")" "Name=Uninstall Gone"
+[ ! -e "$tmp/xdg/applications/gog-gone-uninstall.desktop" ] || { echo "FAILED: uninstaller does not belong in the menu"; exit 1; }
 XDG_DATA_HOME="$tmp/xdg" "$tmp/gone.pc/uninstall.sh" -y >/dev/null
 [ ! -d "$tmp/gone.pc" ] || { echo "FAILED: folder survived"; exit 1; }
 [ ! -e "$tmp/xdg/applications/gog-gone.desktop" ] || { echo "FAILED: menu entry survived"; exit 1; }
-[ ! -e "$tmp/xdg/applications/gog-gone-uninstall.desktop" ] || { echo "FAILED: uninstall entry survived"; exit 1; }
 
 # plain Windows game: writes autorun.cmd
 mkdir -p "$tmp/win.pc"; touch "$tmp/win.pc/game.exe"

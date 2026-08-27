@@ -325,21 +325,7 @@ PYICON
   } > "$entry"
   chmod +x "$entry"
 
-  # GOG puts an uninstall entry next to the game on Windows; same idea here
-  {
-    echo "[Desktop Entry]"
-    echo "Type=Application"
-    echo "Name=Uninstall $name"
-    echo "Exec=$target/uninstall.sh"
-    echo "Path=$target"
-    [ -n "$icon" ] && echo "Icon=$icon"
-    echo "Categories=Game;"
-    echo "Terminal=true"
-    echo "NoDisplay=false"
-  } > "${entry%.desktop}-uninstall.desktop"
-  chmod +x "${entry%.desktop}-uninstall.desktop"
 
   command -v update-desktop-database >/dev/null && update-desktop-database "$apps" 2>/dev/null
   echo "menu entry: $entry"
-  echo "menu entry: ${entry%.desktop}-uninstall.desktop"
 fi
