@@ -112,8 +112,16 @@ if [ ! -d "$WINEPREFIX" ] && [ -f "$target/gog-registry.reg" ]; then
   app="Z:${target//\//\\}"
   app=${app//\\/\\\\}          # a .reg file wants its backslashes doubled
   reg=$(mktemp)
+  # ${var//x/y} eats backslashes in the replacement, which mangles the path into
+  # something regedit reads as escapes. Splicing with printf keeps it literal.
   while IFS= read -r line || [ -n "$line" ]; do
-    printf '%s\n' "${line//%APP%/$app}"
+    while :; do
+      case "$line" in
+        *%APP%*) line="${line%%%APP%*}$app${line#*%APP%}" ;;
+        *) break ;;
+      esac
+    done
+    printf '%s\n' "$line"
   done < "$target/gog-registry.reg" > "$reg"
   "${WINE:-wine}" regedit /S "$reg" 2>/dev/null || true
   rm -f "$reg"

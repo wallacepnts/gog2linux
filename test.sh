@@ -100,6 +100,12 @@ out=$(run "$tmp/reg.pc/play.sh")
 has reg-import "$out" "regedit /S"
 has reg-run "$out" "Game.exe"
 
+# and the path it splices in keeps its backslashes doubled, the way .reg wants
+printf '#!/bin/sh\ncat "$3"\n' > "$tmp/dumpwine"; chmod +x "$tmp/dumpwine"
+rm -rf "$tmp/reg.pc/.prefix"
+esc=$(printf '%s' "$tmp/reg.pc" | sed 's|/|\\\\|g')
+has reg-path "$(WINE="$tmp/dumpwine" "$tmp/reg.pc/play.sh" 2>/dev/null)" "\"InstallPath\"=\"Z:$esc\""
+
 # --desktop writes a freedesktop entry, with the GOG icon when there is one
 mkdir -p "$tmp/menu.pc"; touch "$tmp/menu.pc/Game.exe"
 python3 - "$tmp/menu.pc/goggame-9.ico" <<'ICO'
