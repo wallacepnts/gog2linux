@@ -392,7 +392,9 @@ case " $(printf '%s %s' "$name" "$(basename "${target%.pc}")" | tr '[:upper:]' '
     port="EDuke32"; port_url="eduke32.com" ;;
   *blood*)
     port="NBlood"; port_url="github.com/nukeykt/NBlood" ;;
-  *"shadow warrior"*|*"redneck rampage"*|*powerslave*|*exhumed*|*tekwar*|*witchaven*|*nam*|*"world war ii gi"*)
+  *"shadow warrior"*)
+    port="VoidSW"; port_url="voidsw.com" ;;
+  *"redneck rampage"*|*powerslave*|*exhumed*|*tekwar*|*witchaven*|*nam*|*"world war ii gi"*)
     port="Raze"; port_url="raze.zdoom.org" ;;
   *"rise of the triad"*)
     port="rottexpr"; port_url="github.com/fabiangreffrath/rottexpr" ;;
@@ -568,6 +570,10 @@ case " $(printf '%s %s' "$name" "$(basename "${target%.pc}")" | tr '[:upper:]' '
     port="Freeserf.net"; port_url="github.com/Pyrdacor/freeserf.net" ;;
   *"theme hospital"*)
     port="CorsixTH"; port_url="corsixth.com" ;;
+  *simcity*|*micropolis*)
+    port="Micropolis"; port_url="github.com/SimHacker/micropolis" ;;
+  *homeworld*)
+    port="Homeworld SDL"; port_url="github.com/HomeworldSDL/HomeworldSDL" ;;
   *"transport tycoon"*)
     port="OpenTTD"; port_url="www.openttd.org" ;;
   *locomotion*)

@@ -52,11 +52,12 @@ incomplete, and *dormant* means it works yet nobody maintains it.
 | Quake | vkQuake | <https://github.com/Novum/vkQuake> |
 | Quake II | Yamagi Quake II | <https://www.yamagi.org/quake2> |
 | Quake III Arena | ioquake3 | <https://ioquake3.org> |
+| Redneck Rampage, Powerslave, TekWar, Witchaven, NAM | Raze | <https://raze.zdoom.org> |
 | Return to Castle Wolfenstein | iortcw | <https://github.com/iortcw/iortcw> |
 | Rise of the Triad: Dark War | rottexpr | <https://github.com/fabiangreffrath/rottexpr> |
 | S.T.A.L.K.E.R. series | OpenXRay | <https://github.com/OpenXRay/xray-16> |
 | Serious Sam: The First and Second Encounter | Serious Sam Classic VK | <https://github.com/tx00100xt/SeriousSamClassic-VK> |
-| Shadow Warrior, Redneck Rampage, Powerslave, TekWar, Witchaven, NAM | Raze | <https://raze.zdoom.org> |
+| Shadow Warrior | VoidSW | <https://voidsw.com> |
 | Star Wars: Dark Forces | The Force Engine | <https://theforceengine.github.io> |
 | System Shock | Shockolate | <https://github.com/Interrupt/systemshock> |
 | System Shock 2 | openDarkEngine *(work in progress)* | <https://github.com/volca02/openDarkEngine> |
@@ -105,12 +106,14 @@ incomplete, and *dormant* means it works yet nobody maintains it.
 | Dungeon Keeper 2 | OpenKeeper *(work in progress)* | <https://github.com/tonihele/OpenKeeper> |
 | Heroes of Might and Magic II | fheroes2 | <https://github.com/ihhub/fheroes2> |
 | Heroes of Might and Magic III | VCMI | <https://vcmi.eu> |
+| Homeworld | Homeworld SDL *(dormant, but usable)* | <https://github.com/HomeworldSDL/HomeworldSDL> |
 | Jagged Alliance 2 | JA2-Stracciatella | <https://ja2-stracciatella.github.io> |
 | Knights and Merchants | KaM Remake | <https://www.kamremake.com> |
 | Master of Orion | 1oom | <https://gitlab.com/KilgoreTroutMaskReplicant/1oom> |
 | Pharaoh | Akhenaten | <https://github.com/dalerank/Akhenaten> |
 | RollerCoaster Tycoon 2 | OpenRCT2 | <https://openrct2.io> |
 | Sid Meier's Alpha Centauri | GLSMAC *(work in progress)* | <https://github.com/afwbkbc/glsmac> |
+| SimCity (1989) | Micropolis | <https://github.com/SimHacker/micropolis> |
 | StarCraft | Stargus *(work in progress)* | <https://github.com/Wargus/stargus> |
 | Syndicate | FreeSynd *(dormant, but usable)* | <https://freesynd.sourceforge.io> |
 | Syndicate Wars | Syndicate Wars Port | <https://github.com/swaledge/swars> |
@@ -177,6 +180,32 @@ incomplete, and *dormant* means it works yet nobody maintains it.
 the `scummvm` system rather than wine — the same holds on the desktop. That
 detection reads the files, not the title, which is why this last section is the
 only one `build.sh` does not match by name.
+
+---
+
+## Where the answer is a remaster, not a port
+
+For a few classics the practical route is buying the official re-release rather
+than running an engine over your GOG copy. They are listed here so the absence
+from the tables above is not read as an oversight — none of them uses your
+original files.
+
+| Classic | Official re-release | Open alternative |
+|---|---|---|
+| Diablo II | Diablo II: Resurrected | OpenDiablo2, Riiablo — both unfinished |
+| Warcraft III | Warcraft III: Reforged | WarsmashModEngine, work in progress |
+| StarCraft | StarCraft: Remastered | Stargus, partially playable |
+| Age of Empires I and II | Definitive Editions | openage, work in progress |
+| Baldur's Gate, Planescape, Icewind Dale | Enhanced Editions | GemRB, which also runs the originals |
+| System Shock | System Shock (2023 remake) | Shockolate, which runs the original |
+| Homeworld | Homeworld Remastered | Homeworld SDL, from the released source |
+| Carmageddon | Carmageddon: Max Damage | Dethrace, which runs the original |
+| Quake, Doom | Remastered editions on modern stores | GZDoom, vkQuake — usually better |
+
+The last row is the pattern worth noticing: for id Software games the community
+engines beat the official re-releases, because the source has been open for
+decades. For Blizzard and Relic titles the opposite holds, since no source was
+ever released and the recreations are still years from complete.
 
 ---
 
