@@ -187,6 +187,13 @@ XDG_DATA_HOME="$tmp/xdg" "$tmp/gone.pc/uninstall.sh" -y >/dev/null
 has ptbr "$(GOG2LINUX_LANG=pt "$here/build.sh" "$tmp/multi.pc")" "pronto:"
 has ptbr-others "$(GOG2LINUX_LANG=pt "$here/build.sh" "$tmp/multi.pc")" "outras entradas"
 
+# GOG's ddraw wrapper ships windowed; packaging flips it to fullscreen
+mkdir -p "$tmp/dx.pc"; touch "$tmp/dx.pc/Game.exe"
+printf '[dxcfg]\ndisplay=desktop\npresentation=windowed\nscaling=fit\n' > "$tmp/dx.pc/dxcfg.ini"
+has dxcfg "$("$here/build.sh" "$tmp/dx.pc")" "switched to fullscreen"
+has dxcfg-file "$(cat "$tmp/dx.pc/dxcfg.ini")" "presentation=fullscreen"
+has dxcfg-keep "$(cat "$tmp/dx.pc/dxcfg.ini")" "scaling=fit"
+
 # plain Windows game: writes autorun.cmd
 mkdir -p "$tmp/win.pc"; touch "$tmp/win.pc/game.exe"
 has windows "$("$here/build.sh" "$tmp/win.pc")" "CMD=game.exe"

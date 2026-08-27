@@ -48,6 +48,7 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_SCUMM_BATO="/userdata/roms/scummvm/"
     M_NO_AUTORUN="Nenhum autorun.cmd gerado - seria inutil. Veja o README."
     M_DONE="pronto: %s (CMD=%s)\n"
+    M_DXCFG="obs: dxcfg.ini estava em janela; mudei para tela cheia (edite o arquivo para voltar)"
     M_REG="obs: gog-registry.reg gerado; o play.sh aplica ao criar o prefixo"
     M_WRAPPERS="obs: wrappers do jogo tem prioridade sobre os do wine: %s\n"
     M_OTHERS="outras entradas no goggame-*.info: %s\n"
@@ -79,6 +80,7 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_SCUMM_BATO="/userdata/roms/scummvm/"
     M_NO_AUTORUN="No autorun.cmd written - it would be useless. See the README."
     M_DONE="done: %s (CMD=%s)\n"
+    M_DXCFG="note: dxcfg.ini was set to windowed; switched to fullscreen (edit the file to revert)"
     M_REG="note: gog-registry.reg written; play.sh applies it when it creates the prefix"
     M_WRAPPERS="note: bundled wrappers given priority over wine's own: %s\n"
     M_OTHERS="other entries in goggame-*.info: %s\n"
@@ -352,6 +354,13 @@ done
 } > "$target/autorun.cmd"
 here=$(dirname "$(readlink -f "$0")")
 cp "$here/play.sh" "$here/uninstall.sh" "$here/saves.sh" "$target/"
+# GOG's DirectDraw wrapper ships set to windowed. On a desktop that is a small
+# box in the corner; on Batocera it is worse. Flip it, and say so.
+if [ -f "$target/dxcfg.ini" ] && grep -q '^presentation=windowed' "$target/dxcfg.ini"; then
+  sed -i 's/^presentation=windowed/presentation=fullscreen/' "$target/dxcfg.ini"
+  echo "$M_DXCFG"
+fi
+
 printf "$M_DONE" "$target" "$exe"
 [ -n "$wrappers" ] && printf "$M_WRAPPERS" "$wrappers"
 if [ -f "$target/gog-registry.reg" ]; then
