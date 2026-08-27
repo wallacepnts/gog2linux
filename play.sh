@@ -14,6 +14,15 @@ shopt -s nullglob
 
 die() { echo "$*" >&2; exit 1; }
 
+case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
+  pt*) M_NO_AUTORUN="autorun.cmd nao encontrado em %s\n"
+       M_NO_CMD="autorun.cmd sem linha CMD= em %s\n"
+       M_NO_EXEC="aviso: %s sem permissao de execucao, seguindo pelo wine\n" ;;
+  *)   M_NO_AUTORUN="autorun.cmd not found in %s\n"
+       M_NO_CMD="autorun.cmd has no CMD= line in %s\n"
+       M_NO_EXEC="warning: %s is not executable, falling back to wine\n" ;;
+esac
+
 target=$(readlink -f "${1:-$(dirname "$(readlink -f "$0")")}")
 
 # extra arguments override CMD: handy for the launcher, map editor, config tools
@@ -66,12 +75,12 @@ if [ -z "${FORCE_WINE:-}" ] && [ -z "$override" ] && compgen -G "$target/lib/*li
       cd "$target"
       exec "$candidate"
     fi
-    echo "warning: $candidate is not executable, falling back to wine" >&2
+    printf "$M_NO_EXEC" "$candidate" >&2
     break
   done
 fi
 
-[ -e "$target/autorun.cmd" ] || die "autorun.cmd not found in $target"
+[ -e "$target/autorun.cmd" ] || die "$(printf "$M_NO_AUTORUN" "$target")"
 
 DIR=. CMD= GAMELANG=
 # `|| [ -n "$line" ]` rescues the last line when the trailing \n is missing
@@ -87,7 +96,7 @@ done < <(tr -d '\r' < "$target/autorun.cmd")   # autorun.cmd often comes with CR
 if [ -n "$override" ]; then
   CMD=$override
 fi
-[ -n "$CMD" ] || die "autorun.cmd has no CMD= line in $target"
+[ -n "$CMD" ] || die "$(printf "$M_NO_CMD" "$target")"
 
 # a .wine/.wtgz folder already IS the prefix; a .pc folder keeps its own beside it
 if [ -d "$target/drive_c" ]; then

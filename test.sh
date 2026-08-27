@@ -160,6 +160,8 @@ rm -rf "$tmp/sv2.pc/SAVE" "$tmp/sv2.pc/.prefix/drive_c/users"
 eq save-game "$(cat "$tmp/sv2.pc/SAVE/slot1.dat")" "old"
 eq save-prefix "$(cat "$tmp/sv2.pc/.prefix/drive_c/users/w/Documents/save.txt")" "doc"
 
+has saves-ptbr "$(GOG2LINUX_LANG=pt "$tmp/sv2.pc/saves.sh" backup "$tmp/bk2.tar.gz")" "backup feito:"
+
 # uninstalling backs the saves up before it deletes anything
 mkdir -p "$tmp/bye.pc/SAVE"; touch "$tmp/bye.pc/Game.exe"
 printf '{"name":"Bye","playTasks":[{"category":"game","path":"Game.exe"}]}' > "$tmp/bye.pc/goggame-9.info"

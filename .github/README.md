@@ -225,16 +225,17 @@ Replace `%APP%` in the file with the Windows-side path first — `Z:\userdata\ro
 
 ## Language of the tool itself
 
-`build.sh` and `uninstall.sh` speak English or Portuguese, picked from `$LANG`:
+The scripts speak English or Portuguese, picked from `$LANG`:
 
 ```bash
 GOG2LINUX_LANG=pt ./build.sh Game.pc "/path/setup.exe"   # force Portuguese
 GOG2LINUX_LANG=en ./build.sh Game.pc "/path/setup.exe"   # force English
 ```
 
-Anything not matching `pt*` gets English. There is no gettext and no `.po`
-file — two blocks of shell variables, chosen once at startup. Scripts that only
-print errors (`play.sh`, `saves.sh`) stay in English.
+All four scripts follow it: `build.sh`, `play.sh`, `saves.sh` and
+`uninstall.sh`. Anything not matching `pt*` gets English. There is no gettext
+and no `.po` file — a block of shell variables per script, chosen once at
+startup, so the copies that live inside each game folder stay self-contained.
 
 Note this is the language of the **messages**, not of the game: that one is
 `--lang`, and the two are independent.

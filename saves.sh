@@ -9,6 +9,21 @@
 set -euo pipefail
 shopt -s nullglob
 
+case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
+  pt*) M_NONE="nenhum save encontrado em %s\n"
+       M_DONE="backup feito: %s (%s)\n"
+       M_FROM="  de: %s\n"
+       M_RESTORED="restaurado %s em %s\n"
+       M_USE_RESTORE="uso: %s restore ARQUIVO.tar.gz\n"
+       M_USAGE="uso: %s [backup|restore] [ARQUIVO.tar.gz]\n" ;;
+  *)   M_NONE="no saves found in %s\n"
+       M_DONE="backed up: %s (%s)\n"
+       M_FROM="  from: %s\n"
+       M_RESTORED="restored %s into %s\n"
+       M_USE_RESTORE="usage: %s restore FILE.tar.gz\n"
+       M_USAGE="usage: %s [backup|restore] [FILE.tar.gz]\n" ;;
+esac
+
 target=$(dirname "$(readlink -f "$0")")
 name=$(basename "$target"); name=${name%.pc}
 
@@ -21,18 +36,18 @@ done
 
 case "${1:-backup}" in
   backup)
-    [ ${#paths[@]} -gt 0 ] || { echo "no saves found in $target" >&2; exit 1; }
+    [ ${#paths[@]} -gt 0 ] || { printf "$M_NONE" "$target" >&2; exit 1; }
     file=${2:-$PWD/$name-saves-$(date +%Y%m%d-%H%M).tar.gz}
     tar czf "$file" -C "$target" "${paths[@]}"
-    echo "backed up: $file ($(du -h "$file" | cut -f1))"
-    printf '  from: %s\n' "${paths[@]}"
+    printf "$M_DONE" "$file" "$(du -h "$file" | cut -f1)"
+    printf "$M_FROM" "${paths[@]}"
     ;;
   restore)
     file=${2:-}
-    [ -f "$file" ] || { echo "usage: $0 restore FILE.tar.gz" >&2; exit 1; }
+    [ -f "$file" ] || { printf "$M_USE_RESTORE" "$0" >&2; exit 1; }
     tar xzf "$file" -C "$target"
-    echo "restored $file into $target"
+    printf "$M_RESTORED" "$file" "$target"
     ;;
   *)
-    echo "usage: $0 [backup|restore] [FILE.tar.gz]" >&2; exit 1 ;;
+    printf "$M_USAGE" "$0" >&2; exit 1 ;;
 esac
