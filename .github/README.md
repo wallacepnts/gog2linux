@@ -33,7 +33,7 @@ want a Microsoft DLL).
 
 ```bash
 # 1. package (once, on any Linux PC)
-./build.sh GameName.pc "/path/setup_game_1.2.3.exe" ["dlc1.exe" "dlc2.exe" ...]
+./build.sh [--desktop] GameName.pc "/path/setup_game_1.2.3.exe" ["dlc1.exe" "dlc2.exe" ...]
 
 # 2. test it on your distro
 ./GameName.pc/play.sh
@@ -204,6 +204,36 @@ WINEPREFIX=/userdata/saves/windows/Game wine regedit /S /userdata/roms/windows/G
 ```
 
 Replace `%APP%` in the file with the Windows-side path first — `Z:\userdata\roms\windows\Game.pc`.
+
+---
+
+## Adding the game to the desktop menu
+
+At the end of packaging, `build.sh` offers to create a menu entry:
+
+```
+Add "DOOM 3" to the desktop games menu? [y/N]
+```
+
+Answering no — which is the default, so Enter is enough — changes nothing.
+Answering yes writes a freedesktop `.desktop` file to
+`~/.local/share/applications/`, using the game name from the GOG metadata. That
+is all KDE, GNOME and XFCE need; there is no per-desktop code.
+
+The icon comes out of `goggame-*.ico`, which packs every size from 16×16 to
+256×256. Desktops tend to grab the first entry and show a blurry 16×16, so
+`build.sh` cuts the largest one out into `icon.png` and points the entry there.
+
+The question only appears on a terminal. For scripts, decide up front:
+
+```bash
+./build.sh --desktop    Game.pc "/path/setup.exe"    # always create it
+./build.sh --no-desktop Game.pc "/path/setup.exe"    # never ask
+```
+
+The entry points at the `.pc` folder by absolute path, so move the folder and
+the launcher breaks — rerun `./build.sh --desktop Game.pc` from the new place
+to fix it, or delete `~/.local/share/applications/gog-<name>.desktop`.
 
 ---
 

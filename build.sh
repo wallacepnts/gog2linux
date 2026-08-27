@@ -8,7 +8,13 @@ shopt -s dotglob nullglob
 
 die() { echo "$*" >&2; exit 1; }
 
-[ $# -ge 1 ] || die "usage: $0 Game.pc setup.exe [dlc.exe ...]"
+desktop=ask
+case "${1:-}" in
+  --desktop)    desktop=yes; shift ;;
+  --no-desktop) desktop=no;  shift ;;
+esac
+
+[ $# -ge 1 ] || die "usage: $0 [--desktop|--no-desktop] Game.pc setup.exe [dlc.exe ...]"
 command -v innoextract >/dev/null ||
   die "innoextract is missing: install the innoextract package (apt/dnf/pacman/zypper)"
 command -v python3 >/dev/null || die "python3 is missing: install the python3 package"
@@ -59,8 +65,9 @@ def load(pattern):
             pass
 
 
-tasks, langs = [], {'*'}
+tasks, langs, name = [], {'*'}, ''
 for d in load('goggame-*.info'):
+    name = name or (d.get('name') or '')
     langs |= {str(x).lower() for x in (d.get('languages') or [])}
     for t in d.get('playTasks') or []:
         path = (t.get('path') or '').replace('\\', '/')
@@ -119,11 +126,14 @@ if keys:
 
 print(chosen)
 print(';'.join(sorted({p for _, _, p in tasks if p != chosen})))
+print(name)
 PYMETA
 ) || die "python3 is required to read the GOG metadata"
 
 exe=$(printf '%s\n' "$meta" | sed -n 1p)
 others=$(printf '%s\n' "$meta" | sed -n 2p)
+name=$(printf '%s\n' "$meta" | sed -n 3p)
+[ -n "$name" ] || name=$(basename "${target%.pc}")
 
 # no .info: first .exe at the root that isn't an accessory
 if [ -z "$exe" ]; then
@@ -201,4 +211,52 @@ if compgen -G "$target/lib/*linux*" >/dev/null; then
     echo "note: native Linux build here -> ./$(basename "$target")/$native (no wine)"
     break
   done
+fi
+
+# A .desktop entry is all KDE, GNOME and XFCE need; no per-desktop code.
+if [ "$desktop" = ask ] && [ -t 0 ]; then
+  printf 'Add "%s" to the desktop games menu? [y/N] ' "$name"
+  read -r answer
+  case "$answer" in [yYsS]*) desktop=yes ;; *) desktop=no ;; esac
+fi
+
+if [ "$desktop" = yes ]; then
+  apps="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+  mkdir -p "$apps"
+  entry="$apps/gog-$(basename "${target%.pc}").desktop"
+  # a .ico holds every size; desktops tend to grab the first (16x16), so pull
+  # out the biggest one. GOG stores them PNG-compressed, so it is a plain cut.
+  icon=$(python3 - "$target" <<'PYICON'
+import glob, os, struct, sys
+
+target = sys.argv[1]
+found = glob.glob(os.path.join(target, 'goggame-*.ico'))
+if found:
+    blob = open(found[0], 'rb').read()
+    best = (0, None)
+    for i in range(struct.unpack('<H', blob[4:6])[0]):
+        w, h, _, _, _, _, size, off = struct.unpack('<BBBBHHII', blob[6 + i * 16:22 + i * 16])
+        if (w or 256) * (h or 256) > best[0] and blob[off:off + 4] == b'\x89PNG':
+            best = ((w or 256) * (h or 256), blob[off:off + size])
+    if best[1]:
+        png = os.path.join(target, 'icon.png')
+        open(png, 'wb').write(best[1])
+        print(png)
+    else:
+        print(found[0])
+PYICON
+) || icon=
+  {
+    echo "[Desktop Entry]"
+    echo "Type=Application"
+    echo "Name=$name"
+    echo "Exec=$target/play.sh"
+    echo "Path=$target"
+    [ -n "$icon" ] && echo "Icon=$icon"
+    echo "Categories=Game;"
+    echo "Terminal=false"
+  } > "$entry"
+  chmod +x "$entry"
+  command -v update-desktop-database >/dev/null && update-desktop-database "$apps" 2>/dev/null
+  echo "menu entry: $entry"
 fi

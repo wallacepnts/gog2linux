@@ -4,6 +4,7 @@
 #   how the detection gets tested without a real GOG installer.
 #   play.sh gets a fake "wine" that prints cwd, prefix, env and arguments.
 set -euo pipefail
+exec </dev/null          # build.sh only offers the menu entry on a tty
 here=$(dirname "$(readlink -f "$0")")
 tmp=$(mktemp -d); tmp=$(cd "$tmp" && pwd -P); trap 'rm -rf "$tmp"' EXIT
 printf '#!/bin/sh\necho "$PWD|$WINEPREFIX|$WINEDLLOVERRIDES|$*"\n' > "$tmp/fakewine"
@@ -82,6 +83,28 @@ cp "$here/play.sh" "$tmp/reg.pc/"
 out=$(run "$tmp/reg.pc/play.sh")
 has reg-import "$out" "regedit /S"
 has reg-run "$out" "Game.exe"
+
+# --desktop writes a freedesktop entry, with the GOG icon when there is one
+mkdir -p "$tmp/menu.pc"; touch "$tmp/menu.pc/Game.exe"
+python3 - "$tmp/menu.pc/goggame-9.ico" <<'ICO'
+import struct, sys
+# two entries, 16x16 and 256x256, both PNG-compressed like GOG ships them
+small, big = b'\x89PNG' + b'small', b'\x89PNG' + b'big'
+head = struct.pack('<HHH', 0, 1, 2)
+off = 6 + 32
+d1 = struct.pack('<BBBBHHII', 16, 16, 0, 0, 1, 32, len(small), off)
+d2 = struct.pack('<BBBBHHII', 0, 0, 0, 0, 1, 32, len(big), off + len(small))
+open(sys.argv[1], 'wb').write(head + d1 + d2 + small + big)
+ICO
+printf '{"name":"My Game","playTasks":[{"category":"game","path":"Game.exe"}]}' > "$tmp/menu.pc/goggame-9.info"
+XDG_DATA_HOME="$tmp/xdg" "$here/build.sh" --desktop "$tmp/menu.pc" >/dev/null
+entry="$tmp/xdg/applications/gog-menu.desktop"
+[ -f "$entry" ] || { echo "FAILED: no .desktop written"; exit 1; }
+has desktop-name "$(cat "$entry")" "Name=My Game"
+has desktop-exec "$(cat "$entry")" "Exec=$tmp/menu.pc/play.sh"
+has desktop-icon "$(cat "$entry")" "Icon=$tmp/menu.pc/icon.png"
+[ "$(cat "$tmp/menu.pc/icon.png")" = "$(printf '\x89PNGbig')" ] || { echo "FAILED: took the small icon"; exit 1; }
+has desktop-cat  "$(cat "$entry")" "Categories=Game;"
 
 # plain Windows game: writes autorun.cmd
 mkdir -p "$tmp/win.pc"; touch "$tmp/win.pc/game.exe"

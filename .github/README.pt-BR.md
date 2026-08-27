@@ -33,7 +33,7 @@ Extras conforme o caso: `squashfs-tools` (abrir `.wsquashfs`), `winetricks`
 
 ```bash
 # 1. empacotar (uma vez, em qualquer PC Linux)
-./build.sh NomeDoJogo.pc "/caminho/setup_jogo_1.2.3.exe" ["dlc1.exe" "dlc2.exe" ...]
+./build.sh [--desktop] NomeDoJogo.pc "/caminho/setup_jogo_1.2.3.exe" ["dlc1.exe" "dlc2.exe" ...]
 
 # 2. testar na sua distro
 ./NomeDoJogo.pc/play.sh
@@ -201,6 +201,37 @@ WINEPREFIX=/userdata/saves/windows/Jogo wine regedit /S /userdata/roms/windows/J
 ```
 
 Troque o `%APP%` do arquivo pelo caminho do lado Windows antes — `Z:\userdata\roms\windows\Jogo.pc`.
+
+---
+
+## Colocando o jogo no menu do desktop
+
+Ao terminar de empacotar, o `build.sh` oferece criar a entrada de menu:
+
+```
+Add "DOOM 3" to the desktop games menu? [y/N]
+```
+
+Responder não — que é o padrão, então Enter basta — não muda nada. Aceitando,
+ele grava um `.desktop` padrão freedesktop em `~/.local/share/applications/`,
+com o nome tirado dos metadados da GOG. É tudo que KDE, GNOME e XFCE precisam;
+não há código específico por ambiente.
+
+O ícone sai do `goggame-*.ico`, que embute todos os tamanhos, de 16×16 a
+256×256. Os ambientes costumam pegar a primeira entrada e exibir um 16×16
+borrado, então o `build.sh` recorta o maior pra `icon.png` e aponta a entrada
+pra lá.
+
+A pergunta só aparece em terminal. Em script, decida de antemão:
+
+```bash
+./build.sh --desktop    Jogo.pc "/caminho/setup.exe"    # cria sempre
+./build.sh --no-desktop Jogo.pc "/caminho/setup.exe"    # nunca pergunta
+```
+
+A entrada aponta pra pasta `.pc` por caminho absoluto, então mover a pasta
+quebra o atalho — rode `./build.sh --desktop Jogo.pc` do novo lugar pra
+corrigir, ou apague `~/.local/share/applications/gog-<nome>.desktop`.
 
 ---
 
