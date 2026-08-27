@@ -307,9 +307,36 @@ note: Nox has a reimplemented engine (OpenNox) - native, better than wine: flath
 ```
 
 It only tells you. Installing the port, and keeping the wine copy or not, stays
-your call. Around twenty games are recognised, among them Morrowind (OpenMW),
-Diablo (DevilutionX), Heroes of Might and Magic III (VCMI), Command & Conquer
-(OpenRA), Ultima VII (Exult) and Warcraft II (Wargus).
+your call. These are the ones it recognises:
+
+| Game | Engine | Project |
+|---|---|---|
+| Nox | OpenNox | <https://flathub.org/apps/io.github.noxworld_dev.OpenNox> |
+| Morrowind | OpenMW | <https://openmw.org> |
+| Diablo | DevilutionX | <https://github.com/diasurgical/devilutionX> |
+| Heroes of Might and Magic III | VCMI | <https://vcmi.eu> |
+| Command & Conquer, Red Alert, Dune 2000, Tiberian Sun | OpenRA | <https://openra.net> |
+| Transport Tycoon Deluxe | OpenTTD | <https://openttd.org> |
+| Theme Hospital | CorsixTH | <https://corsixth.com> |
+| Arx Fatalis | Arx Libertatis | <https://arx-libertatis.org> |
+| Dungeon Keeper | KeeperFX | <https://keeperfx.net> |
+| Caesar III | Augustus | <https://github.com/Keriew/augustus> |
+| Pharaoh | Ozymandias | <https://github.com/Keriew/ozymandias> |
+| Ultima VII | Exult | <https://exult.info> |
+| Daggerfall | Daggerfall Unity | <https://dfworkshop.net> |
+| Fallout 1 and 2 | Fallout Community Edition | <https://github.com/alexbatalov/fallout2-ce> |
+| Baldur's Gate, Planescape: Torment, Icewind Dale | GemRB | <https://gemrb.org> |
+| System Shock | Shockolate | <https://github.com/Interrupt/systemshock> |
+| Descent 1 and 2 | DXX-Rebirth | <https://dxx-rebirth.com> |
+| Master of Orion 2 | 1oom | <https://gitlab.com/KilgoreTroutMaskReplicant/1oom> |
+| Syndicate | FreeSynd | <https://freesynd.sourceforge.io> |
+| Tomb Raider | TR1X | <https://github.com/LostArtefacts/TR1X> |
+| Freespace 2 | Freespace Open | <https://fsnebula.org> |
+| Warcraft II | Wargus | <https://wargus.github.io> |
+
+Matching is on the game name, so a GOG bundle or a differently titled edition
+may slip past. The list is worth a look before packaging anything from the
+nineties.
 
 If you do install one, drop a `launch.sh` in the `.pc` folder and the menu entry
 points at it instead of `play.sh`:
