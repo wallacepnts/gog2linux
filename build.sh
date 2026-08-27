@@ -221,9 +221,26 @@ if [ -z "$exe" ] || [ ! -e "$target/$exe" ]; then
 fi
 case "$exe" in *\ *) exe="\"$exe\"" ;; esac
 
-printf 'CMD=%s\n' "$exe" > "$target/autorun.cmd"
+# GOG ships graphics/input wrappers named after wine builtins - a scaling ddraw,
+# a gamepad dinput. Wine has a hardcoded load order and uses its own, so the
+# wrapper sits there unused and the game renders in a corner. ENV= fixes it on
+# Batocera too, which is why it goes in autorun.cmd rather than play.sh.
+wrappers=
+for candidate in "$target"/*.dll; do
+  case "${candidate##*/}" in
+    ddraw.dll|d3d8.dll|d3d9.dll|dinput.dll|dinput8.dll|dsound.dll|xinput1_[1-4].dll)
+      name=${candidate##*/}
+      wrappers="${wrappers:+$wrappers,}${name%.dll}" ;;
+  esac
+done
+
+{
+  [ -n "$wrappers" ] && printf 'ENV=WINEDLLOVERRIDES="%s=n,b"\n' "$wrappers"
+  printf 'CMD=%s\n' "$exe"
+} > "$target/autorun.cmd"
 cp "$(dirname "$(readlink -f "$0")")/play.sh" "$target/"
 echo "done: $target (CMD=$exe)"
+[ -n "$wrappers" ] && echo "note: bundled wrappers given priority over wine's own: $wrappers"
 if [ -f "$target/gog-registry.reg" ]; then
   echo "note: gog-registry.reg written; play.sh applies it when it creates the prefix"
 fi

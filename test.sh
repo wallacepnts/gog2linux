@@ -134,6 +134,12 @@ has desktop-cat  "$(cat "$entry")" "Categories=Game;"
 # the flags parse in any order and none of them swallow the destination
 has flags "$("$here/build.sh" --lang en-US --no-desktop "$tmp/multi.pc")" "CMD=Game_dx.exe"
 
+# a bundled ddraw is a wrapper wine would otherwise ignore; UnityPlayer is not
+mkdir -p "$tmp/wrap.pc"; touch "$tmp/wrap.pc/Game.exe" "$tmp/wrap.pc/ddraw.dll" "$tmp/wrap.pc/dinput.dll" "$tmp/wrap.pc/UnityPlayer.dll"
+"$here/build.sh" "$tmp/wrap.pc" >/dev/null
+has wrappers "$(cat "$tmp/wrap.pc/autorun.cmd")" 'ENV=WINEDLLOVERRIDES="ddraw,dinput=n,b"'
+case "$(cat "$tmp/wrap.pc/autorun.cmd")" in *UnityPlayer*) echo "FAILED: overrode a DLL wine does not provide"; exit 1 ;; esac
+
 # plain Windows game: writes autorun.cmd
 mkdir -p "$tmp/win.pc"; touch "$tmp/win.pc/game.exe"
 has windows "$("$here/build.sh" "$tmp/win.pc")" "CMD=game.exe"
