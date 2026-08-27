@@ -177,6 +177,32 @@ sendo melhor.
 
 ---
 
+## Rodando o launcher ou as ferramentas que vêm junto
+
+Jogo da GOG costuma trazer mais que o jogo: launcher, editor de mapas,
+trocador de chave, configuração de DirectPlay. Passe o executável como segundo
+argumento e ele roda no mesmo prefixo, sem tocar no `autorun.cmd`:
+
+```bash
+./Jogo.pc/play.sh . "Launcher.exe"
+./Jogo.pc/play.sh . "Map Editor.exe"
+```
+
+O `build.sh` lista o que mais existe no `goggame-*.info`, logo após empacotar:
+
+```
+done: /caminho/Jogo.pc (CMD=Launcher.exe)
+other entries in goggame-*.info: Jogo_dx.exe, Map Editor.exe
+  if the game won't start, try one of those in autorun.cmd
+```
+
+Vale saber: a GOG normalmente marca o **launcher** como tarefa primária, e é
+ele que acaba no `autorun.cmd`. Se o jogo não abrir por ali, quase sempre uma
+das alternativas resolve — títulos antigos costumam trazer uma build clássica e
+uma DirectX, e só a segunda sobrevive ao wine.
+
+---
+
 ## Arquivos deste projeto
 
 | | |
@@ -185,6 +211,8 @@ sendo melhor.
 | `play.sh` | roda `.pc`, `.wine`, `.wtgz` ou `.wsquashfs` fora do Batocera |
 | `test.sh` | checagem dos dois (detecção, parser, CRLF, nativo, cache) |
 
-Variáveis que o `play.sh` respeita: `WINE` (binário), `WINEPREFIX`, `WINEARCH`,
+O `play.sh` aceita um segundo argumento opcional que sobrescreve o `CMD`.
+
+Variáveis que ele respeita: `WINE` (binário), `WINEPREFIX`, `WINEARCH`,
 `FORCE_WINE=1` (ignora build nativo),
 `WINE_GAMES` (onde extrair arquivo único).

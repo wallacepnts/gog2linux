@@ -85,11 +85,20 @@ fi
 if [ -z "$exe" ] || [ ! -e "$target/$exe" ]; then
   die "could not find the game executable in $target"
 fi
+# the .info often lists a launcher, the game and tools. build.sh cannot know
+# which one actually survives wine, so it shows what else is on offer.
+others=$(grep -oh '"path": *"[^"]*\.exe"' "$target"/goggame-*.info /dev/null 2>/dev/null |
+         sed 's/.*"\(.*\)"/\1/' | tr '\\' '/' | grep -Fxv "$exe" | sort -u | paste -sd';') || true
+
 case "$exe" in *\ *) exe="\"$exe\"" ;; esac
 
 printf 'CMD=%s\n' "$exe" > "$target/autorun.cmd"
 cp "$(dirname "$(readlink -f "$0")")/play.sh" "$target/"
 echo "done: $target (CMD=$exe)"
+if [ -n "$others" ]; then
+  echo "other entries in goggame-*.info: ${others//;/, }"
+  echo "  if the game won't start, try one of those in autorun.cmd"
+fi
 
 # Ren'Py and friends: the Windows installer usually carries the Linux build too.
 # Same rule as play.sh (the two copies are deliberate, see the note there).

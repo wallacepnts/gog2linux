@@ -1,0 +1,7 @@
+# packaged games: hundreds of MB each, rebuildable from the installers
+*.pc/
+*.wtgz
+*.wsquashfs
+
+# local wine prefix
+.prefix/

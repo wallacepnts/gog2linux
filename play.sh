@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Runs a Batocera-format game on any distro.
 #
-#   ./play.sh                  the folder this script sits in (.pc or .wine)
-#   ./play.sh Game.wtgz        extract and run
-#   ./play.sh Game.wsquashfs   same (needs unsquashfs)
+#   ./play.sh                        the folder this script sits in (.pc or .wine)
+#   ./play.sh Game.wtgz              extract and run
+#   ./play.sh Game.wsquashfs         same (needs unsquashfs)
+#   ./play.sh . "Launcher.exe"       run another executable in the same prefix
 #
 # Batocera ignores this script and reads autorun.cmd directly. This file gets
 # copied into every game folder, so it has to stand on its own: no sourcing,
@@ -14,6 +15,15 @@ shopt -s nullglob
 die() { echo "$*" >&2; exit 1; }
 
 target=$(readlink -f "${1:-$(dirname "$(readlink -f "$0")")}")
+
+# extra arguments override CMD: handy for the launcher, map editor, config tools
+# that GOG ships alongside the game. printf %q keeps it safe for the eval below.
+override=
+if [ $# -gt 1 ]; then
+  shift
+  override=$(printf '%q ' "$@")
+fi
+
 cache="${WINE_GAMES:-$HOME/.local/share/wine-games}"
 
 # ponytail: extracts instead of mounting (doubles the disk). Swap for squashfuse
@@ -47,7 +57,7 @@ fi
 # Native Linux build shipped alongside (Ren'Py and friends): better than wine.
 # FORCE_WINE=1 skips this. Both clues are required so an install script doesn't
 # get mistaken for a launcher.
-if [ -z "${FORCE_WINE:-}" ] && compgen -G "$target/lib/*linux*" >/dev/null; then
+if [ -z "${FORCE_WINE:-}" ] && [ -z "$override" ] && compgen -G "$target/lib/*linux*" >/dev/null; then
   for candidate in "$target"/*.sh; do
     [ "${candidate##*/}" = play.sh ] && continue
     # copying through NTFS/exFAT, or unzipping, loses the execute bit
@@ -74,6 +84,9 @@ while IFS= read -r line || [ -n "$line" ]; do
   esac
 done < <(tr -d '\r' < "$target/autorun.cmd")   # autorun.cmd often comes with CRLF
 
+if [ -n "$override" ]; then
+  CMD=$override
+fi
 [ -n "$CMD" ] || die "autorun.cmd has no CMD= line in $target"
 
 # a .wine/.wtgz folder already IS the prefix; a .pc folder keeps its own beside it

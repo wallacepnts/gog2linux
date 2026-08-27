@@ -43,6 +43,14 @@ mkdir -p "$tmp/t.pc/tmp"; touch "$tmp/t.pc/game.exe" "$tmp/t.pc/tmp/save.dat"
 has tmp "$("$here/build.sh" "$tmp/t.pc")" "CMD=game.exe"
 [ -e "$tmp/t.pc/tmp/save.dat" ] || { echo "FAILED: reclassify deleted the game's tmp/"; exit 1; }
 
+# a .info listing launcher + game + tool: picks one, shows the rest
+mkdir -p "$tmp/multi.pc"
+touch "$tmp/multi.pc/Launcher.exe" "$tmp/multi.pc/Game_dx.exe" "$tmp/multi.pc/Editor.exe"
+printf '{"playTasks":[{"category":"launcher","path":"Launcher.exe"},{"category":"game","path":"Game_dx.exe"},{"category":"tool","path":"Editor.exe"}]}' > "$tmp/multi.pc/goggame-1.info"
+out=$("$here/build.sh" "$tmp/multi.pc")
+has multi-cmd "$out" "CMD=Launcher.exe"
+has multi-alt "$out" "Editor.exe, Game_dx.exe"
+
 # plain Windows game: writes autorun.cmd
 mkdir -p "$tmp/win.pc"; touch "$tmp/win.pc/game.exe"
 has windows "$("$here/build.sh" "$tmp/win.pc")" "CMD=game.exe"
@@ -82,6 +90,10 @@ run "$tmp/g.pc/play.sh" "$tmp/g.wtgz" >/dev/null
 head -c 200 /dev/urandom > "$tmp/corrupt.wtgz"
 ! run "$tmp/g.pc/play.sh" "$tmp/corrupt.wtgz" >/dev/null 2>&1 || { echo "FAILED: exited 0 on a corrupt wtgz"; exit 1; }
 [ ! -d "$tmp/cache/corrupt" ] || { echo "FAILED: aborted extraction became cache"; exit 1; }
+
+# a second argument overrides CMD (launcher, editor) and skips the native build
+eq override "$(run "$tmp/n.pc/play.sh" "$tmp/n.pc" "Other Game.exe" --windowed)" \
+            "$tmp/n.pc|$tmp/n.pc/.prefix||Other Game.exe --windowed"
 
 # native .sh without the execute bit: recover instead of dying with rc=126
 mkdir -p "$tmp/nx.pc/lib/py2-linux-x86_64"; cp "$here/play.sh" "$tmp/nx.pc/"
