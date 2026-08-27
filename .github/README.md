@@ -21,7 +21,7 @@ welded to the distro that made it.
 | openSUSE | `sudo zypper in innoextract wine` |
 | **Batocera** | **nothing** — Wine-GE ships with it |
 
-- `innoextract` — for **packaging** only (unpacks GOG's InnoSetup without running anything).
+- `innoextract` and `python3` — for **packaging** only (unpack the InnoSetup and read GOG's metadata; nothing Windows runs).
 - `wine` — for **playing** only. If you just copy the folder to Batocera, you don't need it.
 
 Case by case: `squashfs-tools` (to open `.wsquashfs`), `winetricks` (games that
@@ -180,6 +180,33 @@ better.
 
 ---
 
+## What the GOG installer would have done
+
+Packaging skips the installer, so everything it would have written is missing:
+install paths in the registry, CD-key locations, DirectPlay entries. Games
+notice. Doom 3 asks for a key it already ships; Warcraft II says the game is
+not installed.
+
+`build.sh` reads `goggame-*.script` — GOG's own install recipe — and turns its
+registry actions into `gog-registry.reg` inside the `.pc` folder. `play.sh`
+applies that the first time it creates a prefix, resolving the install path to
+wherever the folder happens to sit.
+
+Two details it gets right that a hand-written `.reg` usually doesn't: actions
+tagged for a language this copy doesn't ship are skipped (otherwise Doom 3
+turns Italian), and `HKLM\Software` keys are written to `WOW6432Node` as well,
+because a 32-bit game in a 64-bit prefix reads them from there.
+
+On Batocera `play.sh` never runs, so apply it once over SSH:
+
+```bash
+WINEPREFIX=/userdata/saves/windows/Game wine regedit /S /userdata/roms/windows/Game.pc/gog-registry.reg
+```
+
+Replace `%APP%` in the file with the Windows-side path first — `Z:\userdata\roms\windows\Game.pc`.
+
+---
+
 ## Running the launcher or the bundled tools
 
 GOG games often ship more than the game: a launcher, a map editor, a key
@@ -191,7 +218,8 @@ runs in the same prefix, with `autorun.cmd` untouched:
 ./Game.pc/play.sh . "Map Editor.exe"
 ```
 
-`build.sh` lists what else the `goggame-*.info` offers, right after packaging:
+`build.sh` picks the entry GOG tags as the game — not the launcher it marks as
+primary — and lists what else is on offer:
 
 ```
 done: /path/Game.pc (CMD=Launcher.exe)
@@ -199,10 +227,10 @@ other entries in goggame-*.info: Game_dx.exe, Map Editor.exe
   if the game won't start, try one of those in autorun.cmd
 ```
 
-Worth knowing: GOG usually marks the **launcher** as the primary task, so that
-is what lands in `autorun.cmd`. If the game won't start from it, one of the
-listed alternatives usually does — old titles often ship both a classic and a
-DirectX build, and only the latter survives wine.
+Worth knowing: GOG usually marks the **launcher** as primary, which is why the
+game entry is preferred instead — a launcher needs a mouse and often starts a
+build wine cannot run. Old titles ship both a classic and a DirectX build, and
+frequently only the latter survives wine.
 
 ---
 

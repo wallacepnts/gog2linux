@@ -47,13 +47,41 @@ mkdir -p "$tmp/t.pc/tmp"; touch "$tmp/t.pc/game.exe" "$tmp/t.pc/tmp/save.dat"
 has tmp "$("$here/build.sh" "$tmp/t.pc")" "CMD=game.exe"
 [ -e "$tmp/t.pc/tmp/save.dat" ] || { echo "FAILED: reclassify deleted the game's tmp/"; exit 1; }
 
-# a .info listing launcher + game + tool: picks one, shows the rest
+# the .info names the exe with Windows casing; the file on disk differs
+mkdir -p "$tmp/case.pc"; touch "$tmp/case.pc/Doom3.exe"
+printf '{"playTasks":[{"category":"game","path":"DOOM3.exe"}]}' > "$tmp/case.pc/goggame-1.info"
+has case "$("$here/build.sh" "$tmp/case.pc")" "CMD=Doom3.exe"
+
+# launcher + game + tool: the game wins even when GOG marks the launcher primary
 mkdir -p "$tmp/multi.pc"
 touch "$tmp/multi.pc/Launcher.exe" "$tmp/multi.pc/Game_dx.exe" "$tmp/multi.pc/Editor.exe"
-printf '{"playTasks":[{"category":"launcher","path":"Launcher.exe"},{"category":"game","path":"Game_dx.exe"},{"category":"tool","path":"Editor.exe"}]}' > "$tmp/multi.pc/goggame-1.info"
+printf '{"playTasks":[{"category":"launcher","isPrimary":true,"path":"Launcher.exe"},{"category":"game","path":"Game_dx.exe"},{"category":"tool","path":"Editor.exe"}]}' > "$tmp/multi.pc/goggame-1.info"
 out=$("$here/build.sh" "$tmp/multi.pc")
-has multi-cmd "$out" "CMD=Launcher.exe"
-has multi-alt "$out" "Editor.exe, Game_dx.exe"
+has multi-cmd "$out" "CMD=Game_dx.exe"
+has multi-alt "$out" "Editor.exe, Launcher.exe"
+
+# the .script becomes a .reg, minus the actions meant for other languages
+mkdir -p "$tmp/reg.pc"; touch "$tmp/reg.pc/Game.exe"
+printf '{"languages":["en-US"],"playTasks":[{"category":"game","path":"Game.exe"}]}' > "$tmp/reg.pc/goggame-1.info"
+cat > "$tmp/reg.pc/goggame-1.script" <<'SCRIPT'
+{"actions":[
+ {"languages":["*"],"install":{"action":"setRegistry","arguments":{
+   "root":"HKLM","subkey":"Software\\id","valueName":"InstallPath","valueData":"{app}","valueType":"string"}}},
+ {"languages":["it-IT"],"install":{"action":"setRegistry","arguments":{
+   "root":"HKLM","subkey":"Software\\id","valueName":"Language","valueData":"ita","valueType":"string"}}}
+]}
+SCRIPT
+"$here/build.sh" "$tmp/reg.pc" >/dev/null
+reg=$(cat "$tmp/reg.pc/gog-registry.reg")
+has reg-path "$reg" '"InstallPath"="%APP%"'
+has reg-wow "$reg" 'HKEY_LOCAL_MACHINE\Software\WOW6432Node\id'
+case "$reg" in *ita*) echo "FAILED reg-lang: kept an it-IT action in an en-US copy"; exit 1 ;; esac
+
+# play.sh applies that .reg when it creates the prefix, with %APP% resolved
+cp "$here/play.sh" "$tmp/reg.pc/"
+out=$(run "$tmp/reg.pc/play.sh")
+has reg-import "$out" "regedit /S"
+has reg-run "$out" "Game.exe"
 
 # plain Windows game: writes autorun.cmd
 mkdir -p "$tmp/win.pc"; touch "$tmp/win.pc/game.exe"

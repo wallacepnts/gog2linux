@@ -105,6 +105,20 @@ elif [ ! -d "$WINEPREFIX" ]; then
   export WINEARCH=win64
 fi
 
+# First run in a fresh prefix: apply the registry the GOG installer would have
+# written - install paths, CD-key locations, DirectPlay. Without it, games ask
+# for a key they already ship, or claim they are not installed.
+if [ ! -d "$WINEPREFIX" ] && [ -f "$target/gog-registry.reg" ]; then
+  app="Z:${target//\//\\}"
+  app=${app//\\/\\\\}          # a .reg file wants its backslashes doubled
+  reg=$(mktemp)
+  while IFS= read -r line || [ -n "$line" ]; do
+    printf '%s\n' "${line//%APP%/$app}"
+  done < "$target/gog-registry.reg" > "$reg"
+  "${WINE:-wine}" regedit /S "$reg" 2>/dev/null || true
+  rm -f "$reg"
+fi
+
 [ -n "$GAMELANG" ] && export LC_ALL="$GAMELANG"
 
 cd "$target/$DIR"

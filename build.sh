@@ -11,6 +11,7 @@ die() { echo "$*" >&2; exit 1; }
 [ $# -ge 1 ] || die "usage: $0 Game.pc setup.exe [dlc.exe ...]"
 command -v innoextract >/dev/null ||
   die "innoextract is missing: install the innoextract package (apt/dnf/pacman/zypper)"
+command -v python3 >/dev/null || die "python3 is missing: install the python3 package"
 
 target=$(readlink -f "$1"); shift
 
@@ -40,10 +41,89 @@ if [ -d "$target/app" ]; then
   rm -rf "$target/app"
 fi
 
-# goggame-*.info names the exe to launch
-# the /dev/null guarantees an operand: without it grep would read stdin and hang
-exe=$(grep -oh '"path": *"[^"]*\.exe"' "$target"/goggame-*.info /dev/null 2>/dev/null |
-      head -1 | sed 's/.*"\(.*\)"/\1/' | tr '\\' '/') || true
+# GOG metadata: which exe to launch, what else it offers, and the registry the
+# installer would have written. Needs real JSON, hence python3.
+meta=$(python3 - "$target" <<'PYMETA'
+import glob, json, os, sys
+
+target = sys.argv[1]
+ROOTS = {'HKLM': 'HKEY_LOCAL_MACHINE', 'HKCU': 'HKEY_CURRENT_USER',
+         'HKEY_LOCAL_MACHINE': 'HKEY_LOCAL_MACHINE', 'HKEY_CURRENT_USER': 'HKEY_CURRENT_USER'}
+
+
+def load(pattern):
+    for f in sorted(glob.glob(os.path.join(target, pattern))):
+        try:
+            yield json.load(open(f, encoding='utf-8-sig'))
+        except (ValueError, OSError):
+            pass
+
+
+tasks, langs = [], {'*'}
+for d in load('goggame-*.info'):
+    langs |= {str(x).lower() for x in (d.get('languages') or [])}
+    for t in d.get('playTasks') or []:
+        path = (t.get('path') or '').replace('\\', '/')
+        if path.lower().endswith('.exe'):
+            tasks.append((t.get('category'), t.get('isPrimary'), path))
+
+# a launcher wants a mouse and often starts a build wine cannot run; the entry
+# GOG tags as the game itself is the better default.
+chosen = ''
+for wanted in (lambda c, p: c == 'game', lambda c, p: p, lambda c, p: True):
+    for cat, primary, path in tasks:
+        if wanted(cat, primary):
+            chosen = path
+            break
+    if chosen:
+        break
+
+keys = {}
+for d in load('goggame-*.script'):
+    for action in d.get('actions') or []:
+        install = action.get('install') or {}
+        if install.get('action') != 'setRegistry':
+            continue
+        if not ({str(x).lower() for x in (action.get('languages') or ['*'])} & langs):
+            continue          # action meant for a language this copy does not use
+        args = install.get('arguments') or {}
+        root = ROOTS.get(args.get('root') or '')
+        if not root:
+            continue
+        entries = keys.setdefault(root + '\\' + args.get('subkey', ''), [])
+        if args.get('valueName'):
+            entries.append((args['valueName'], args.get('valueType') or 'string', args.get('valueData')))
+
+
+def value(kind, data):
+    if kind == 'dword':
+        return 'dword:%08x' % int(str(data), 0)
+    text = str(data).replace('{app}', '%APP%').replace('\\', '\\\\').replace('"', '\\"')
+    return '"%s"' % text
+
+
+if keys:
+    out = ['Windows Registry Editor Version 5.00', '']
+    for key, entries in keys.items():
+        # a 32-bit game in a win64 prefix reads HKLM\Software through WOW6432Node
+        variants = [key]
+        if key.startswith('HKEY_LOCAL_MACHINE\\Software\\'):
+            variants.append(key.replace('HKEY_LOCAL_MACHINE\\Software\\',
+                                        'HKEY_LOCAL_MACHINE\\Software\\WOW6432Node\\', 1))
+        for k in variants:
+            out.append('[%s]' % k)
+            out += ['"%s"=%s' % (n, value(t, d)) for n, t, d in entries]
+            out.append('')
+    with open(os.path.join(target, 'gog-registry.reg'), 'w', encoding='utf-8') as fh:
+        fh.write('\n'.join(out))
+
+print(chosen)
+print(';'.join(sorted({p for _, _, p in tasks if p != chosen})))
+PYMETA
+) || die "python3 is required to read the GOG metadata"
+
+exe=$(printf '%s\n' "$meta" | sed -n 1p)
+others=$(printf '%s\n' "$meta" | sed -n 2p)
 
 # no .info: first .exe at the root that isn't an accessory
 if [ -z "$exe" ]; then
@@ -53,6 +133,14 @@ if [ -z "$exe" ]; then
       *) exe=${candidate##*/}; break ;;
     esac
   done
+fi
+
+# the .info is written on Windows, where filename case does not matter
+if [ -n "$exe" ] && [ ! -e "$target/$exe" ]; then
+  found=$(find "$target" -ipath "$target/$exe" -print -quit 2>/dev/null) || true
+  if [ -n "$found" ]; then
+    exe=${found#"$target/"}
+  fi
 fi
 
 # GOG wraps old games in a DOSBox/ScummVM. Pushing that through wine means
@@ -89,16 +177,14 @@ fi
 if [ -z "$exe" ] || [ ! -e "$target/$exe" ]; then
   die "could not find the game executable in $target"
 fi
-# the .info often lists a launcher, the game and tools. build.sh cannot know
-# which one actually survives wine, so it shows what else is on offer.
-others=$(grep -oh '"path": *"[^"]*\.exe"' "$target"/goggame-*.info /dev/null 2>/dev/null |
-         sed 's/.*"\(.*\)"/\1/' | tr '\\' '/' | grep -Fxv "$exe" | sort -u | paste -sd';') || true
-
 case "$exe" in *\ *) exe="\"$exe\"" ;; esac
 
 printf 'CMD=%s\n' "$exe" > "$target/autorun.cmd"
 cp "$(dirname "$(readlink -f "$0")")/play.sh" "$target/"
 echo "done: $target (CMD=$exe)"
+if [ -f "$target/gog-registry.reg" ]; then
+  echo "note: gog-registry.reg written; play.sh applies it when it creates the prefix"
+fi
 if [ -n "$others" ]; then
   echo "other entries in goggame-*.info: ${others//;/, }"
   echo "  if the game won't start, try one of those in autorun.cmd"
