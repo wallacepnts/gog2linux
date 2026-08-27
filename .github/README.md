@@ -66,11 +66,16 @@ writing `autorun.cmd` and tells you which system to use instead.
    `--gog` pulls them together on its own — the `.bin` files only need to sit in
    the same folder.
 3. **A DLC is just one more argument**, in order: base first, DLCs after.
-4. **Copy the whole folder** to Batocera, minus `.prefix/` (that's the local
+4. **Multi-language installers default to English.** GOG ships one installer
+   with every language inside; extracting all of them lets the last one win the
+   metadata, which is how an English game comes out Italian. `build.sh` asks the
+   installer what it offers and picks `en-*` when it is there. Override with
+   `--lang it-IT`, or keep every language with `--lang all`.
+5. **Copy the whole folder** to Batocera, minus `.prefix/` (that's the local
    prefix, ~400 MB, and Batocera doesn't use it).
-5. **Keep `/userdata/` on btrfs or ext4.** NTFS breaks wine, Steam/Galaxy games
+6. **Keep `/userdata/` on btrfs or ext4.** NTFS breaks wine, Steam/Galaxy games
    especially.
-6. **The folder name is the name shown** in EmulationStation.
+7. **The folder name is the name shown** in EmulationStation.
 
 ---
 

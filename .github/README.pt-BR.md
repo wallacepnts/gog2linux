@@ -65,11 +65,16 @@ antes de gerar o `autorun.cmd` e diz qual sistema usar.
    `setup_jogo.exe` + `setup_jogo-1.bin` + `setup_jogo-2.bin`. O `--gog` do
    innoextract junta tudo sozinho — os `.bin` só precisam estar na mesma pasta.
 3. **DLC é só mais um argumento**, na ordem: base primeiro, DLCs depois.
-4. **Copie a pasta inteira** pro Batocera, sem o `.prefix/` (é o prefixo local,
+4. **Instalador multi-idioma sai em inglês.** A GOG entrega um instalador só,
+   com todos os idiomas dentro; extrair tudo faz o último vencer os metadados —
+   é assim que um jogo em inglês termina em italiano. O `build.sh` pergunta ao
+   instalador o que ele oferece e escolhe `en-*` quando existe. Troque com
+   `--lang it-IT`, ou guarde todos com `--lang all`.
+5. **Copie a pasta inteira** pro Batocera, sem o `.prefix/` (é o prefixo local,
    pesa uns 400 MB e o Batocera não usa).
-5. **`/userdata/` em btrfs ou ext4.** NTFS quebra wine, principalmente jogos
+6. **`/userdata/` em btrfs ou ext4.** NTFS quebra wine, principalmente jogos
    Steam/Galaxy.
-6. **Nome da pasta = nome que aparece na lista** do EmulationStation.
+7. **Nome da pasta = nome que aparece na lista** do EmulationStation.
 
 ---
 

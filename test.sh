@@ -106,6 +106,9 @@ has desktop-icon "$(cat "$entry")" "Icon=$tmp/menu.pc/icon.png"
 [ "$(cat "$tmp/menu.pc/icon.png")" = "$(printf '\x89PNGbig')" ] || { echo "FAILED: took the small icon"; exit 1; }
 has desktop-cat  "$(cat "$entry")" "Categories=Game;"
 
+# the flags parse in any order and none of them swallow the destination
+has flags "$("$here/build.sh" --lang en-US --no-desktop "$tmp/multi.pc")" "CMD=Game_dx.exe"
+
 # plain Windows game: writes autorun.cmd
 mkdir -p "$tmp/win.pc"; touch "$tmp/win.pc/game.exe"
 has windows "$("$here/build.sh" "$tmp/win.pc")" "CMD=game.exe"

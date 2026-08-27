@@ -9,12 +9,18 @@ shopt -s dotglob nullglob
 die() { echo "$*" >&2; exit 1; }
 
 desktop=ask
-case "${1:-}" in
-  --desktop)    desktop=yes; shift ;;
-  --no-desktop) desktop=no;  shift ;;
-esac
+lang=auto
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --desktop)    desktop=yes; shift ;;
+    --no-desktop) desktop=no;  shift ;;
+    --lang)       lang=${2:-}; shift 2 ;;
+    --lang=*)     lang=${1#--lang=}; shift ;;
+    *)            break ;;
+  esac
+done
 
-[ $# -ge 1 ] || die "usage: $0 [--desktop|--no-desktop] Game.pc setup.exe [dlc.exe ...]"
+[ $# -ge 1 ] || die "usage: $0 [--desktop|--no-desktop] [--lang CODE|all] Game.pc setup.exe [dlc.exe ...]"
 command -v innoextract >/dev/null ||
   die "innoextract is missing: install the innoextract package (apt/dnf/pacman/zypper)"
 command -v python3 >/dev/null || die "python3 is missing: install the python3 package"
@@ -33,7 +39,16 @@ done
 mkdir -p "$target"
 if [ $# -gt 0 ]; then
   for setup in "$@"; do
-    innoextract --gog --silent --collisions=overwrite -d "$target" "$(readlink -f "$setup")"
+    setup=$(readlink -f "$setup")
+    # a multi-language installer extracts every language at once, and the last
+    # one wins the metadata -- which is how an English game ends up Italian.
+    pick=$lang
+    if [ "$lang" = auto ]; then
+      pick=$(innoextract --list-languages "$setup" 2>/dev/null | awk '/^ - en/{print $2; exit}') || true
+    fi
+    opts=()
+    [ -n "$pick" ] && [ "$pick" != all ] && opts+=(--language "$pick") && echo "language: $pick"
+    innoextract --gog --silent --collisions=overwrite "${opts[@]}" -d "$target" "$setup"
   done
   # installer scaffolding. Only after extracting: in reclassify mode that tmp/
   # may well be a folder belonging to the game itself.
