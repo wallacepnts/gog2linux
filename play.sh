@@ -108,7 +108,11 @@ fi
 # First run in a fresh prefix: apply the registry the GOG installer would have
 # written - install paths, CD-key locations, DirectPlay. Without it, games ask
 # for a key they already ship, or claim they are not installed.
-if [ ! -d "$WINEPREFIX" ] && [ -f "$target/gog-registry.reg" ]; then
+# The paths inside it are absolute, so renaming or moving the .pc folder makes
+# them stale and the game acts as if it was never installed. The stamp records
+# what was applied, so a move re-applies instead of failing quietly.
+stamp="$WINEPREFIX/.gog-registry-path"
+if [ -f "$target/gog-registry.reg" ] && [ "$(cat "$stamp" 2>/dev/null)" != "$target" ]; then
   app="Z:${target//\//\\}"
   app=${app//\\/\\\\}          # a .reg file wants its backslashes doubled
   reg=$(mktemp)
@@ -125,6 +129,7 @@ if [ ! -d "$WINEPREFIX" ] && [ -f "$target/gog-registry.reg" ]; then
   done < "$target/gog-registry.reg" > "$reg"
   "${WINE:-wine}" regedit /S "$reg" 2>/dev/null || true
   rm -f "$reg"
+  mkdir -p "$WINEPREFIX" && printf '%s\n' "$target" > "$stamp"
 fi
 
 [ -n "$GAMELANG" ] && export LC_ALL="$GAMELANG"

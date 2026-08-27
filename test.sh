@@ -103,6 +103,11 @@ out=$(run "$tmp/reg.pc/play.sh")
 has reg-import "$out" "regedit /S"
 has reg-run "$out" "Game.exe"
 
+# renaming the folder makes the recorded paths stale, so it re-applies
+mv "$tmp/reg.pc" "$tmp/moved.pc"
+has reg-removed "$(run "$tmp/moved.pc/play.sh")" "regedit /S"
+mv "$tmp/moved.pc" "$tmp/reg.pc"
+
 # and the path it splices in keeps its backslashes doubled, the way .reg wants
 printf '#!/bin/sh\ncat "$3"\n' > "$tmp/dumpwine"; chmod +x "$tmp/dumpwine"
 rm -rf "$tmp/reg.pc/.prefix"
