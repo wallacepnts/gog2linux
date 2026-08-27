@@ -141,6 +141,17 @@ mkdir -p "$tmp/wrap.pc"; touch "$tmp/wrap.pc/Game.exe" "$tmp/wrap.pc/ddraw.dll" 
 has wrappers "$(cat "$tmp/wrap.pc/autorun.cmd")" 'ENV=WINEDLLOVERRIDES="ddraw,dinput=n,b"'
 case "$(cat "$tmp/wrap.pc/autorun.cmd")" in *UnityPlayer*) echo "FAILED: overrode a DLL wine does not provide"; exit 1 ;; esac
 
+# the uninstaller lands in the folder and takes the game and both entries away
+mkdir -p "$tmp/gone.pc"; touch "$tmp/gone.pc/Game.exe"
+printf '{"name":"Gone","playTasks":[{"category":"game","path":"Game.exe"}]}' > "$tmp/gone.pc/goggame-9.info"
+XDG_DATA_HOME="$tmp/xdg" "$here/build.sh" --desktop "$tmp/gone.pc" >/dev/null
+[ -x "$tmp/gone.pc/uninstall.sh" ] || { echo "FAILED: no uninstall.sh copied"; exit 1; }
+has uninstall-entry "$(cat "$tmp/xdg/applications/gog-gone-uninstall.desktop")" "Name=Uninstall Gone"
+XDG_DATA_HOME="$tmp/xdg" "$tmp/gone.pc/uninstall.sh" -y >/dev/null
+[ ! -d "$tmp/gone.pc" ] || { echo "FAILED: folder survived"; exit 1; }
+[ ! -e "$tmp/xdg/applications/gog-gone.desktop" ] || { echo "FAILED: menu entry survived"; exit 1; }
+[ ! -e "$tmp/xdg/applications/gog-gone-uninstall.desktop" ] || { echo "FAILED: uninstall entry survived"; exit 1; }
+
 # plain Windows game: writes autorun.cmd
 mkdir -p "$tmp/win.pc"; touch "$tmp/win.pc/game.exe"
 has windows "$("$here/build.sh" "$tmp/win.pc")" "CMD=game.exe"

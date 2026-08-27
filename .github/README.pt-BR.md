@@ -245,9 +245,21 @@ A pergunta só aparece em terminal. Em script, decida de antemão:
 ./build.sh --no-desktop Jogo.pc "/caminho/setup.exe"    # nunca pergunta
 ```
 
-A entrada aponta pra pasta `.pc` por caminho absoluto, então mover a pasta
-quebra o atalho — rode `./build.sh --desktop Jogo.pc` do novo lugar pra
-corrigir, ou apague `~/.local/share/applications/gog-<nome>.desktop`.
+São gravadas duas entradas, como a GOG faz no Windows: o jogo e
+**Uninstall &lt;jogo&gt;**. O desinstalador é o `uninstall.sh` dentro da pasta, e
+funciona no terminal também:
+
+```bash
+./Jogo.pc/uninstall.sh        # lista o que vai sair, depois pergunta
+./Jogo.pc/uninstall.sh -y     # sem pergunta
+```
+
+Ele leva a pasta, o prefixo wine dentro dela e as duas entradas de menu. Saves
+que o jogo gravou em outro lugar não são tocados.
+
+As entradas apontam pra pasta `.pc` por caminho absoluto, então mover a pasta
+quebra os atalhos — rode `./build.sh --desktop Jogo.pc` do novo lugar pra
+corrigir, ou apague `~/.local/share/applications/gog-<nome>*.desktop`.
 
 ---
 
@@ -284,6 +296,7 @@ clássica e uma DirectX, e com frequência só a segunda sobrevive ao wine.
 |---|---|
 | `build.sh` | instalador GOG → pasta `.pc` |
 | `play.sh` | roda `.pc`, `.wine`, `.wtgz` ou `.wsquashfs` fora do Batocera |
+| `uninstall.sh` | remove um jogo empacotado, seu prefixo e as entradas de menu |
 | `test.sh` | checagem dos dois (detecção, parser, CRLF, nativo, cache) |
 
 O `play.sh` aceita um segundo argumento opcional que sobrescreve o `CMD`.

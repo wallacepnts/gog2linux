@@ -255,7 +255,8 @@ done
   [ -n "$wrappers" ] && printf 'ENV=WINEDLLOVERRIDES="%s=n,b"\n' "$wrappers"
   printf 'CMD=%s\n' "$exe"
 } > "$target/autorun.cmd"
-cp "$(dirname "$(readlink -f "$0")")/play.sh" "$target/"
+here=$(dirname "$(readlink -f "$0")")
+cp "$here/play.sh" "$here/uninstall.sh" "$target/"
 echo "done: $target (CMD=$exe)"
 [ -n "$wrappers" ] && echo "note: bundled wrappers given priority over wine's own: $wrappers"
 if [ -f "$target/gog-registry.reg" ]; then
@@ -323,6 +324,22 @@ PYICON
     echo "Terminal=false"
   } > "$entry"
   chmod +x "$entry"
+
+  # GOG puts an uninstall entry next to the game on Windows; same idea here
+  {
+    echo "[Desktop Entry]"
+    echo "Type=Application"
+    echo "Name=Uninstall $name"
+    echo "Exec=$target/uninstall.sh"
+    echo "Path=$target"
+    [ -n "$icon" ] && echo "Icon=$icon"
+    echo "Categories=Game;"
+    echo "Terminal=true"
+    echo "NoDisplay=false"
+  } > "${entry%.desktop}-uninstall.desktop"
+  chmod +x "${entry%.desktop}-uninstall.desktop"
+
   command -v update-desktop-database >/dev/null && update-desktop-database "$apps" 2>/dev/null
   echo "menu entry: $entry"
+  echo "menu entry: ${entry%.desktop}-uninstall.desktop"
 fi

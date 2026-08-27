@@ -247,9 +247,21 @@ The question only appears on a terminal. For scripts, decide up front:
 ./build.sh --no-desktop Game.pc "/path/setup.exe"    # never ask
 ```
 
-The entry points at the `.pc` folder by absolute path, so move the folder and
-the launcher breaks — rerun `./build.sh --desktop Game.pc` from the new place
-to fix it, or delete `~/.local/share/applications/gog-<name>.desktop`.
+Two entries are written, the way GOG does it on Windows: the game, and
+**Uninstall &lt;game&gt;**. The uninstaller is `uninstall.sh` inside the folder, so it
+works from a terminal too:
+
+```bash
+./Game.pc/uninstall.sh        # lists what goes, then asks
+./Game.pc/uninstall.sh -y     # no question
+```
+
+It takes the folder, the wine prefix inside it and both menu entries. Saves the
+game wrote elsewhere are left alone.
+
+The entries point at the `.pc` folder by absolute path, so move the folder and
+they break — rerun `./build.sh --desktop Game.pc` from the new place to fix
+them, or delete `~/.local/share/applications/gog-<name>*.desktop`.
 
 ---
 
@@ -286,6 +298,7 @@ frequently only the latter survives wine.
 |---|---|
 | `build.sh` | GOG installer → `.pc` folder |
 | `play.sh` | runs `.pc`, `.wine`, `.wtgz` or `.wsquashfs` outside Batocera |
+| `uninstall.sh` | removes a packaged game, its prefix and its menu entries |
 | `test.sh` | checks both (detection, parser, CRLF, native build, cache) |
 
 `play.sh` takes an optional second argument that overrides `CMD`.
