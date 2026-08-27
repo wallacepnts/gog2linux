@@ -372,60 +372,230 @@ fi
 # installing it is the user's call.
 port= ; port_url=
 case " $(printf '%s %s' "$name" "$(basename "${target%.pc}")" | tr '[:upper:]' '[:lower:]') " in
-  *"doom 3"*|*doom3*)         port="dhewm3";           port_url="dhewm3.org" ;;
-  *"hexen ii"*)               port="Hammer of Thyrion"; port_url="sourceforge.net/projects/uhexen2" ;;
-  *doom*|*heretic*|*hexen*|*strife*) port="GZDoom";    port_url="zdoom.org" ;;
-  *"duke nukem 3d"*)          port="EDuke32";          port_url="eduke32.com" ;;
-  *blood*)                    port="NBlood";           port_url="github.com/nukeykt/NBlood" ;;
-  *"shadow warrior"*|*"redneck rampage"*) port="Raze"; port_url="raze.zdoom.org" ;;
-  *"quake ii"*|*"quake 2"*)   port="Yamagi Quake II";  port_url="yamagi.org/quake2" ;;
-  *"quake iii"*|*"quake 3"*)  port="ioquake3";         port_url="ioquake3.org" ;;
-  *quake*)                    port="vkQuake";          port_url="github.com/Novum/vkQuake" ;;
-  *"wolfenstein 3d"*|*"spear of destiny"*) port="ECWolf"; port_url="maniacsvault.net/ecwolf" ;;
-  *"return to castle wolfenstein"*) port="iortcw";     port_url="github.com/iortcw/iortcw" ;;
-  *"jedi knight"*|*"dark forces ii"*) port="OpenJKDF2"; port_url="github.com/shinyquagsire23/OpenJKDF2" ;;
-  *"jedi outcast"*|*"jedi academy"*) port="OpenJK";     port_url="github.com/JACoders/OpenJK" ;;
-  *"dark forces"*)            port="The Force Engine"; port_url="theforceengine.github.io" ;;
-  *"enemy territory"*)        port="ET: Legacy";       port_url="etlegacy.com" ;;
-  *"might and magic vi"*|*"might and magic vii"*|*"might and magic viii"*) port="OpenEnroth"; port_url="github.com/OpenEnroth/OpenEnroth" ;;
-  *"ultima viii"*|*"ultima 8"*) port="Pentagram";      port_url="pentagram.sourceforge.net" ;;
-  *colonization*)             port="FreeCol";          port_url="freecol.org" ;;
-  *"dune ii"*|*"dune 2"*)     port="Dune Legacy";      port_url="dunelegacy.sourceforge.net" ;;
-  *"heroes of might and magic ii"*|*"heroes of might and magic 2"*) port="fheroes2"; port_url="github.com/ihhub/fheroes2" ;;
-  *"jagged alliance 2"*)      port="ja2-stracciatella"; port_url="github.com/ja2-stracciatella/ja2-stracciatella" ;;
-  *"settlers ii"*|*"settlers 2"*) port="Return to the Roots"; port_url="siedler25.org" ;;
-  *starcraft*)                port="Stargus";          port_url="github.com/Wargus/stargus" ;;
-  *"x-com"*|*"xcom"*|*"ufo defense"*|*"terror from the deep"*) port="OpenXcom"; port_url="openxcom.org" ;;
-  *"another world"*|*"out of this world"*) port="rawgl"; port_url="github.com/cyxx/rawgl" ;;
-  *"commander keen"*)         port="Commander Genius"; port_url="github.com/gerstrong/Commander-Genius" ;;
-  *flashback*)                port="REminiscence";     port_url="github.com/cyxx/reminiscence" ;;
-  *"prince of persia"*)       port="SDLPoP";           port_url="github.com/NagyD/SDLPoP" ;;
-  *"star control"*)           port="The Ur-Quan Masters"; port_url="sc2.sourceforge.net" ;;
-  *"half-life"*|*"half life"*) port="Xash3D FWGS";     port_url="github.com/FWGS/xash3d-fwgs" ;;
-  *marathon*)                 port="Aleph One";        port_url="alephone.lhowon.org" ;;
-  *"little big adventure"*)   port="TwinE";            port_url="github.com/mgerhardy/vengi-twinengine" ;;
-  *nox*)                      port="OpenNox";          port_url="flathub io.github.noxworld_dev.OpenNox" ;;
-  *morrowind*|*elder\ scrolls\ iii*) port="OpenMW";  port_url="openmw.org" ;;
-  *diablo*)                   port="DevilutionX";      port_url="github.com/diasurgical/devilutionX" ;;
-  *"heroes of might"*|*homm*) port="VCMI";             port_url="vcmi.eu" ;;   # III; II acima
-  *"command & conquer"*|*"red alert"*|*"dune 2000"*|*"tiberian sun"*) port="OpenRA"; port_url="openra.net" ;;
-  *"transport tycoon"*)       port="OpenTTD";          port_url="openttd.org" ;;
-  *"theme hospital"*)         port="CorsixTH";         port_url="corsixth.com" ;;
-  *"arx fatalis"*)            port="Arx Libertatis";   port_url="arx-libertatis.org" ;;
-  *"dungeon keeper"*)         port="KeeperFX";         port_url="keeperfx.net" ;;
-  *"caesar 3"*|*"caesar iii"*) port="Augustus";        port_url="github.com/Keriew/augustus" ;;
-  *pharaoh*)                  port="Ozymandias";       port_url="github.com/Keriew/ozymandias" ;;
-  *"ultima vii"*|*"ultima 7"*) port="Exult";           port_url="exult.info" ;;
-  *daggerfall*)               port="Daggerfall Unity"; port_url="dfworkshop.net" ;;
-  *"fallout 2"*|*"fallout 1"*) port="Fallout Community Edition"; port_url="github.com/alexbatalov/fallout2-ce" ;;
-  *"baldur's gate"*|*"planescape"*|*"icewind dale"*) port="GemRB"; port_url="gemrb.org" ;;
-  *"system shock"*)           port="Shockolate";       port_url="github.com/Interrupt/systemshock" ;;
-  *descent*)                  port="DXX-Rebirth";      port_url="dxx-rebirth.com" ;;
-  *"master of orion 2"*)      port="1oom";             port_url="gitlab.com/KilgoreTroutMaskReplicant/1oom" ;;
-  *syndicate*)                port="FreeSynd";         port_url="freesynd.sourceforge.io" ;;
-  *"tomb raider"*)            port="TR1X";             port_url="github.com/LostArtefacts/TR1X" ;;
-  *"freespace 2"*)            port="Freespace Open";   port_url="fsnebula.org" ;;
-  *"warcraft ii"*|*"warcraft 2"*) port="Wargus";       port_url="wargus.github.io" ;;
+  *"doom 3"*|*doom3*)
+    port="dhewm3"; port_url="dhewm3.org" ;;
+  *"doom 64"*)
+    port="Doom64 EX Plus"; port_url="github.com/atsb/Doom64EX-Plus" ;;
+  *doom*|*heretic*|*strife*|*"chex quest"*)
+    port="GZDoom"; port_url="zdoom.org" ;;
+  *"hexen ii"*|*"hexen 2"*)
+    port="Hammer of Thyrion"; port_url="sourceforge.net/projects/uhexen2" ;;
+  *hexen*)
+    port="GZDoom"; port_url="zdoom.org" ;;
+  *"quake ii"*|*"quake 2"*)
+    port="Yamagi Quake II"; port_url="www.yamagi.org/quake2" ;;
+  *"quake iii"*|*"quake 3"*)
+    port="ioquake3"; port_url="ioquake3.org" ;;
+  *quake*)
+    port="vkQuake"; port_url="github.com/Novum/vkQuake" ;;
+  *"duke nukem 3d"*|*"duke nukem ii"*)
+    port="EDuke32"; port_url="eduke32.com" ;;
+  *blood*)
+    port="NBlood"; port_url="github.com/nukeykt/NBlood" ;;
+  *"shadow warrior"*|*"redneck rampage"*|*powerslave*|*exhumed*|*tekwar*|*witchaven*|*nam*|*"world war ii gi"*)
+    port="Raze"; port_url="raze.zdoom.org" ;;
+  *"rise of the triad"*)
+    port="rottexpr"; port_url="github.com/fabiangreffrath/rottexpr" ;;
+  *"wolfenstein 3d"*|*"spear of destiny"*|*"noah's ark"*)
+    port="ECWolf"; port_url="maniacsvault.net/ecwolf" ;;
+  *"return to castle wolfenstein"*)
+    port="iortcw"; port_url="github.com/iortcw/iortcw" ;;
+  *"enemy territory"*)
+    port="ET: Legacy"; port_url="www.etlegacy.com" ;;
+  *"blake stone"*)
+    port="BStone"; port_url="github.com/bibendovsky/bstone" ;;
+  *"serious sam"*)
+    port="Serious Sam Classic VK"; port_url="github.com/tx00100xt/SeriousSamClassic-VK" ;;
+  *"medal of honor"*|*"medal of honour"*)
+    port="OpenMoHAA"; port_url="github.com/openmoh/openmohaa" ;;
+  *stalker*|*"s.t.a.l.k.e.r"*)
+    port="OpenXRay"; port_url="github.com/OpenXRay/xray-16" ;;
+  *"aliens versus predator"*|*"aliens vs predator"*)
+    port="NakedAVP"; port_url="github.com/nitramtaz/NakedAVP" ;;
+  *"jedi knight"*|*"dark forces ii"*|*"mysteries of the sith"*)
+    port="OpenJKDF2"; port_url="github.com/shinyquagsire23/OpenJKDF2" ;;
+  *"jedi outcast"*|*"jedi academy"*)
+    port="OpenJK"; port_url="github.com/JACoders/OpenJK" ;;
+  *"dark forces"*)
+    port="The Force Engine"; port_url="theforceengine.github.io" ;;
+  *"half-life"*|*"half life"*|*"counter-strike"*)
+    port="Xash3D FWGS"; port_url="github.com/FWGS/xash3d-fwgs" ;;
+  *"system shock 2"*)
+    port="openDarkEngine"; port_url="github.com/volca02/openDarkEngine" ;;
+  *"system shock"*)
+    port="Shockolate"; port_url="github.com/Interrupt/systemshock" ;;
+  *descent*)
+    port="DXX-Rebirth"; port_url="dxx-rebirth.com" ;;
+  *marathon*|*"pathways into darkness"*)
+    port="Aleph One"; port_url="alephone.lhowon.org" ;;
+  *unreal*)
+    port="Surreal Engine"; port_url="github.com/dpjudas/SurrealEngine" ;;
+  *"deus ex"*)
+    port="Surreal 98"; port_url="github.com/HKRepublic/Deus-Ex-Surreal-98" ;;
+  *"tomb raider"*)
+    port="TRX"; port_url="github.com/LostArtefacts/TRX" ;;
+  *drakan*)
+    port="OpenDrakan"; port_url="github.com/Zenol/OpenDrakan" ;;
+  *redguard*)
+    port="Redguard Unity"; port_url="github.com/hazelnutcloud/redguard-unity" ;;
+  *"alone in the dark"*)
+    port="Free In The Dark"; port_url="github.com/OpenFITD/freeInTheDark" ;;
+  *"prince of persia"*)
+    port="SDLPoP"; port_url="github.com/NagyD/SDLPoP" ;;
+  *"another world"*|*"out of this world"*)
+    port="rawgl"; port_url="github.com/cyxx/rawgl" ;;
+  *flashback*)
+    port="REminiscence"; port_url="github.com/cyxx/reminiscence" ;;
+  *"commander keen"*|*"cosmo's cosmic"*|*"keen dreams"*)
+    port="Commander Genius"; port_url="github.com/gerstrong/Commander-Genius" ;;
+  *"jazz jackrabbit 2"*)
+    port="Jazz2 Resurrection"; port_url="github.com/deathkiller/jazz2-native" ;;
+  *"jazz jackrabbit"*)
+    port="OpenJazz"; port_url="github.com/AlisterT/openjazz" ;;
+  *"abe's oddysee"*|*"abe's exoddus"*|*oddworld*)
+    port="R.E.L.I.V.E."; port_url="github.com/AliveTeam/alive_reversing" ;;
+  *"cave story"*)
+    port="NXEngine-evo"; port_url="github.com/nxengine/nxengine-evo" ;;
+  *abuse*)
+    port="Abuse 2025"; port_url="github.com/Xenoveritas/abuse" ;;
+  *tyrian*)
+    port="OpenTyrian"; port_url="github.com/opentyrian/opentyrian" ;;
+  *lemmings*)
+    port="Lemmini"; port_url="github.com/Java-Lemmini/lemmini" ;;
+  *"rick dangerous"*)
+    port="xrick"; port_url="github.com/oco2000/xrick" ;;
+  *nox*)
+    port="OpenNox"; port_url="flathub.org/apps/io.github.noxworld_dev.OpenNox" ;;
+  *"little big adventure"*|*"relentless twinsen"*)
+    port="TwinE"; port_url="github.com/mgerhardy/vengi-twinengine" ;;
+  *"magic carpet"*)
+    port="remc2"; port_url="github.com/AlexRiedel/remc2" ;;
+  *"future cop"*)
+    port="Future Cop: MIT"; port_url="github.com/BastianInsideYou/FutureCopMIT" ;;
+  *morrowind*)
+    port="OpenMW"; port_url="openmw.org" ;;
+  *daggerfall*)
+    port="Daggerfall Unity"; port_url="www.dfworkshop.net" ;;
+  *arena*)
+    port="OpenTESArena"; port_url="github.com/afritz1/OpenTESArena" ;;
+  *diablo*)
+    port="DevilutionX"; port_url="github.com/diasurgical/devilutionX" ;;
+  *"fallout 2"*)
+    port="Fallout 2 CE"; port_url="github.com/alexbatalov/fallout2-ce" ;;
+  *fallout*)
+    port="Fallout CE"; port_url="github.com/alexbatalov/fallout1-ce" ;;
+  *"baldur's gate"*|*planescape*|*"icewind dale"*)
+    port="GemRB"; port_url="gemrb.org" ;;
+  *"ultima underworld"*)
+    port="UnderworldGodot"; port_url="github.com/hankmorgan/UnderworldGodot" ;;
+  *"ultima viii"*|*"ultima 8"*)
+    port="Pentagram"; port_url="pentagram.sourceforge.net" ;;
+  *"ultima vii"*|*"ultima 7"*)
+    port="Exult"; port_url="exult.info" ;;
+  *"might and magic"*)
+    port="OpenEnroth"; port_url="github.com/OpenEnroth/OpenEnroth" ;;
+  *"arx fatalis"*)
+    port="Arx Libertatis"; port_url="arx-libertatis.org" ;;
+  *arcanum*)
+    port="Arcanum CE"; port_url="github.com/alexbatalov/arcanum-ce" ;;
+  *gothic*)
+    port="OpenGothic"; port_url="github.com/Try/OpenGothic" ;;
+  *"betrayal at krondor"*)
+    port="BaKGL"; port_url="github.com/xavierpuigf/BaKGL" ;;
+  *ambermoon*)
+    port="Ambermoon.net"; port_url="github.com/Pyrdacor/Ambermoon.net" ;;
+  *albion*)
+    port="M-HT SR"; port_url="github.com/M-HT/SR" ;;
+  *"knights of the old republic"*|*kotor*)
+    port="reone"; port_url="github.com/seedhartha/reone" ;;
+  *"neverwinter nights"*|*witcher*)
+    port="xoreos"; port_url="xoreos.org" ;;
+  *"heroes of might and magic ii"*|*"heroes of might and magic 2"*)
+    port="fheroes2"; port_url="github.com/ihhub/fheroes2" ;;
+  *"heroes of might"*|*homm*)
+    port="VCMI"; port_url="vcmi.eu" ;;
+  *"warcraft ii"*|*"warcraft 2"*|*"tides of darkness"*)
+    port="Wargus"; port_url="wargus.github.io" ;;
+  *"warcraft: orcs"*|*"orcs & humans"*|*"orcs and humans"*)
+    port="War1gus"; port_url="github.com/Wargus/war1gus" ;;
+  *starcraft*)
+    port="Stargus"; port_url="github.com/Wargus/stargus" ;;
+  *"age of empires"*|*"galactic battlegrounds"*)
+    port="openage"; port_url="openage.dev" ;;
+  *"command & conquer"*|*"command and conquer"*|*"red alert"*|*"tiberian dawn"*)
+    port="OpenRA"; port_url="www.openra.net" ;;
+  *"tiberian sun"*|*generals*)
+    port="OpenSAGE"; port_url="opensage.github.io" ;;
+  *"dune ii"*|*"dune 2"*|*"battle for dune"*)
+    port="Dune Legacy"; port_url="dunelegacy.sourceforge.net" ;;
+  *"knights and merchants"*)
+    port="KaM Remake"; port_url="www.kamremake.com" ;;
+  *"dungeon keeper 2"*)
+    port="OpenKeeper"; port_url="github.com/tonihele/OpenKeeper" ;;
+  *"dungeon keeper"*)
+    port="KeeperFX"; port_url="keeperfx.net" ;;
+  *"total annihilation"*)
+    port="TA3D"; port_url="github.com/TA3D/TA3D" ;;
+  *"warcraft iii"*|*"warcraft 3"*)
+    port="WarsmashModEngine"; port_url="github.com/Retera/WarsmashModEngine" ;;
+  *"syndicate wars"*)
+    port="Syndicate Wars Port"; port_url="github.com/swaledge/swars" ;;
+  *syndicate*)
+    port="FreeSynd"; port_url="freesynd.sourceforge.io" ;;
+  *apocalypse*)
+    port="OpenApoc"; port_url="github.com/OpenApoc/OpenApoc" ;;
+  *"x-com"*|*xcom*|*"ufo defense"*|*"enemy unknown"*|*"terror from the deep"*)
+    port="OpenXcom"; port_url="openxcom.org" ;;
+  *"jagged alliance 2"*)
+    port="JA2-Stracciatella"; port_url="ja2-stracciatella.github.io" ;;
+  *"master of orion"*)
+    port="1oom"; port_url="gitlab.com/KilgoreTroutMaskReplicant/1oom" ;;
+  *"alpha centauri"*)
+    port="GLSMAC"; port_url="github.com/afwbkbc/glsmac" ;;
+  *"call to power"*)
+    port="civctp2"; port_url="github.com/civctp2/civctp2" ;;
+  *colonization*)
+    port="FreeCol"; port_url="www.freecol.org" ;;
+  *"caesar iii"*|*"caesar 3"*)
+    port="Augustus"; port_url="github.com/Keriew/augustus" ;;
+  *pharaoh*|*cleopatra*)
+    port="Akhenaten"; port_url="github.com/dalerank/Akhenaten" ;;
+  *zeus*|*poseidon*)
+    port="eZeus"; port_url="github.com/mortylab/ezeus" ;;
+  *"settlers ii"*|*"settlers 2"*)
+    port="Return to the Roots"; port_url="www.siedler25.org" ;;
+  *"settlers"*)
+    port="Freeserf.net"; port_url="github.com/Pyrdacor/freeserf.net" ;;
+  *"theme hospital"*)
+    port="CorsixTH"; port_url="corsixth.com" ;;
+  *"transport tycoon"*)
+    port="OpenTTD"; port_url="www.openttd.org" ;;
+  *locomotion*)
+    port="OpenLoco"; port_url="github.com/OpenLoco/OpenLoco" ;;
+  *"rollercoaster tycoon 2"*|*"rollercoaster tycoon"*)
+    port="OpenRCT2"; port_url="openrct2.io" ;;
+  *"black & white"*|*"black and white"*)
+    port="Openblack"; port_url="github.com/openblack/openblack" ;;
+  *"terminal velocity"*|*fury3*)
+    port="terminal-recall"; port_url="github.com/jtrfp/terminal-recall" ;;
+  *carmageddon*)
+    port="Dethrace"; port_url="github.com/dethrace-labs/dethrace" ;;
+  *"death rally"*)
+    port="DRally"; port_url="github.com/tapio/drally" ;;
+  *"need for speed"*)
+    port="OpenNFS"; port_url="github.com/OpenNFS/OpenNFS" ;;
+  *"episode i"*|*"episode 1 racer"*|*swe1r*)
+    port="OpenSWE1R"; port_url="github.com/OpenSWE1R/openswe1r" ;;
+  *"midtown madness"*)
+    port="Open1560"; port_url="github.com/0x1F9F1/Open1560" ;;
+  *wipeout*)
+    port="Wipeout Rewrite"; port_url="github.com/phoboslab/wipeout-rewrite" ;;
+  *re-volt*|*revolt*)
+    port="RVGL"; port_url="rvgl.re-volt.io" ;;
+  *"stunt car racer"*)
+    port="stuntcarremake"; port_url="github.com/ptitSeb/stuntcarremake" ;;
+  *driver*)
+    port="REDriver2"; port_url="github.com/OpenDriver2/REDRIVER2" ;;
 esac
 [ -n "$port" ] && printf "$M_PORT" "$name" "$port" "$port_url"
 
