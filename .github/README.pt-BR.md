@@ -305,36 +305,13 @@ obs: Nox tem motor reimplementado (OpenNox) - nativo, melhor que wine: flathub i
 ```
 
 Ele só avisa. Instalar o port, e manter ou não a cópia para wine, é decisão sua.
-Estes são os reconhecidos:
+A lista completa, separada por gênero e com o link de cada projeto, está em
+**[ENGINES.md](ENGINES.md)** — cerca de sessenta jogos.
 
-| Jogo | Motor | Projeto |
-|---|---|---|
-| Arx Fatalis | Arx Libertatis | <https://arx-libertatis.org> |
-| Baldur's Gate, Planescape: Torment, Icewind Dale | GemRB | <https://gemrb.org> |
-| Caesar III | Augustus | <https://github.com/Keriew/augustus> |
-| Command & Conquer, Red Alert, Dune 2000, Tiberian Sun | OpenRA | <https://openra.net> |
-| Daggerfall | Daggerfall Unity | <https://dfworkshop.net> |
-| Descent 1 e 2 | DXX-Rebirth | <https://dxx-rebirth.com> |
-| Diablo | DevilutionX | <https://github.com/diasurgical/devilutionX> |
-| Dungeon Keeper | KeeperFX | <https://keeperfx.net> |
-| Fallout 1 e 2 | Fallout Community Edition | <https://github.com/alexbatalov/fallout2-ce> |
-| Freespace 2 | Freespace Open | <https://fsnebula.org> |
-| Heroes of Might and Magic III | VCMI | <https://vcmi.eu> |
-| Master of Orion 2 | 1oom | <https://gitlab.com/KilgoreTroutMaskReplicant/1oom> |
-| Morrowind | OpenMW | <https://openmw.org> |
-| Nox | OpenNox | <https://flathub.org/apps/io.github.noxworld_dev.OpenNox> |
-| Pharaoh | Ozymandias | <https://github.com/Keriew/ozymandias> |
-| Syndicate | FreeSynd | <https://freesynd.sourceforge.io> |
-| System Shock | Shockolate | <https://github.com/Interrupt/systemshock> |
-| Theme Hospital | CorsixTH | <https://corsixth.com> |
-| Tomb Raider | TR1X | <https://github.com/LostArtefacts/TR1X> |
-| Transport Tycoon Deluxe | OpenTTD | <https://openttd.org> |
-| Ultima VII | Exult | <https://exult.info> |
-| Warcraft II | Wargus | <https://wargus.github.io> |
-
-O casamento é pelo nome do jogo, então uma coletânea da GOG ou uma edição com
-título diferente pode escapar. Vale olhar a lista antes de empacotar qualquer
-coisa dos anos noventa.
+A ordem importa no casamento: DOOM 3 recebe o dhewm3, não o GZDoom que atende o
+resto da família. O casamento é pelo nome do jogo, então uma coletânea da GOG ou
+uma edição com título diferente pode escapar. Vale olhar a lista antes de
+empacotar qualquer coisa dos anos noventa.
 
 Se instalar, ponha um `launch.sh` na pasta `.pc` e a entrada de menu passa a
 apontar pra ele em vez do `play.sh`:

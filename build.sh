@@ -372,6 +372,22 @@ fi
 # installing it is the user's call.
 port= ; port_url=
 case " $(printf '%s %s' "$name" "$(basename "${target%.pc}")" | tr '[:upper:]' '[:lower:]') " in
+  *"doom 3"*|*doom3*)         port="dhewm3";           port_url="dhewm3.org" ;;
+  *"hexen ii"*)               port="Hammer of Thyrion"; port_url="sourceforge.net/projects/uhexen2" ;;
+  *doom*|*heretic*|*hexen*|*strife*) port="GZDoom";    port_url="zdoom.org" ;;
+  *"duke nukem 3d"*)          port="EDuke32";          port_url="eduke32.com" ;;
+  *blood*)                    port="NBlood";           port_url="github.com/nukeykt/NBlood" ;;
+  *"shadow warrior"*|*"redneck rampage"*) port="Raze"; port_url="raze.zdoom.org" ;;
+  *"quake ii"*|*"quake 2"*)   port="Yamagi Quake II";  port_url="yamagi.org/quake2" ;;
+  *"quake iii"*|*"quake 3"*)  port="ioquake3";         port_url="ioquake3.org" ;;
+  *quake*)                    port="vkQuake";          port_url="github.com/Novum/vkQuake" ;;
+  *"wolfenstein 3d"*|*"spear of destiny"*) port="ECWolf"; port_url="maniacsvault.net/ecwolf" ;;
+  *"return to castle wolfenstein"*) port="iortcw";     port_url="github.com/iortcw/iortcw" ;;
+  *"dark forces"*)            port="The Force Engine"; port_url="theforceengine.github.io" ;;
+  *"jedi knight"*|*"jedi outcast"*|*"jedi academy"*) port="OpenJK"; port_url="github.com/JACoders/OpenJK" ;;
+  *"half-life"*|*"half life"*) port="Xash3D FWGS";     port_url="github.com/FWGS/xash3d-fwgs" ;;
+  *marathon*)                 port="Aleph One";        port_url="alephone.lhowon.org" ;;
+  *"little big adventure"*)   port="TwinE";            port_url="github.com/mgerhardy/vengi-twinengine" ;;
   *nox*)                      port="OpenNox";          port_url="flathub io.github.noxworld_dev.OpenNox" ;;
   *morrowind*|*elder\ scrolls\ iii*) port="OpenMW";  port_url="openmw.org" ;;
   *diablo*)                   port="DevilutionX";      port_url="github.com/diasurgical/devilutionX" ;;
