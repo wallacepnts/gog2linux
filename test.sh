@@ -189,7 +189,15 @@ has ptbr-others "$(GOG2LINUX_LANG=pt "$here/build.sh" "$tmp/multi.pc")" "outras 
 
 # an icon that is not called goggame-*.ico still counts
 mkdir -p "$tmp/ico.pc"; touch "$tmp/ico.pc/Game.exe"
-python3 - "$tmp/ico.pc/gog.ico" <<'ICO'
+for f in gog.ico Support.ico NOTES.ICO; do
+python3 - "$tmp/ico.pc/$f" <<'ICO'
+import struct, sys
+small = b'\x89PNG' + b'generic'
+open(sys.argv[1], 'wb').write(
+    struct.pack('<HHH', 0, 1, 1) + struct.pack('<BBBBHHII', 16, 16, 0, 0, 1, 32, len(small), 22) + small)
+ICO
+done
+python3 - "$tmp/ico.pc/ICO.ICO" <<'ICO'
 import struct, sys
 big = b'\x89PNG' + b'nox'
 open(sys.argv[1], 'wb').write(
@@ -197,6 +205,7 @@ open(sys.argv[1], 'wb').write(
 ICO
 XDG_DATA_HOME="$tmp/xdg" "$here/build.sh" --desktop "$tmp/ico.pc" >/dev/null
 has icon-alt "$(cat "$tmp/xdg/applications/gog-ico.desktop")" "Icon=$tmp/ico.pc/icon.png"
+eq icon-named "$(cat "$tmp/ico.pc/icon.png")" "$(printf '\x89PNGnox')"
 
 # GOG's ddraw wrapper ships windowed; packaging flips it to fullscreen
 mkdir -p "$tmp/dx.pc"; touch "$tmp/dx.pc/Game.exe"

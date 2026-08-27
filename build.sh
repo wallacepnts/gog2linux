@@ -401,14 +401,27 @@ if [ "$desktop" = yes ]; then
   entry="$apps/gog-$(basename "${target%.pc}").desktop"
   # a .ico holds every size; desktops tend to grab the first (16x16), so pull
   # out the biggest one. GOG stores them PNG-compressed, so it is a plain cut.
-  icon=$(python3 - "$target" <<'PYICON'
+  icon=$(python3 - "$target" "$(basename "${target%.pc}")" "${exe//\"/}" <<'PYICON'
 import glob, os, struct, sys
 
 target = sys.argv[1]
-# not every release names it goggame-*.ico; Nox ships gog.ico
-found = (glob.glob(os.path.join(target, 'goggame-*.ico'))
-         or glob.glob(os.path.join(target, 'gog*.ico'))
-         or sorted(glob.glob(os.path.join(target, '*.ico'))))
+# A release can carry five .ico files: the game, the GOG logo, a Games for
+# Windows badge, the support page, a readme. Prefer the one named after the
+# game, then GOG's per-game icon; the generic logo is a last resort.
+slug = (sys.argv[2] if len(sys.argv) > 2 else '').lower()
+stem = os.path.splitext(os.path.basename(sys.argv[3] if len(sys.argv) > 3 else ''))[0].lower()
+# NOX.ICO exists next to gog.ico: globbing '*.ico' on Linux would miss it
+every = sorted(f for f in glob.glob(os.path.join(target, '*')) if f.lower().endswith('.ico'))
+
+
+def named(*wanted):
+    return [f for f in every if os.path.splitext(os.path.basename(f))[0].lower() in wanted]
+
+
+found = (named(slug, stem)
+         or [f for f in every if os.path.basename(f).lower().startswith('goggame-')]
+         or [f for f in every if os.path.basename(f).lower().startswith('gog')]
+         or every)
 if found:
     blob = open(found[0], 'rb').read()
     best = (0, None)
