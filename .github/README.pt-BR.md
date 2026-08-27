@@ -294,6 +294,33 @@ corrigir, ou apague `~/.local/share/applications/gog-<nome>.desktop`.
 
 ---
 
+## Quando existe motor nativo
+
+Alguns clássicos tiveram o motor reimplementado — código aberto, nativo, tela
+cheia de verdade, controles modernos. Isso ganha do wine sempre, então o
+`build.sh` avisa ao terminar de empacotar:
+
+```
+obs: Nox tem motor reimplementado (OpenNox) - nativo, melhor que wine: flathub io.github.noxworld_dev.OpenNox
+```
+
+Ele só avisa. Instalar o port, e manter ou não a cópia para wine, é decisão sua.
+São reconhecidos uns vinte jogos, entre eles Morrowind (OpenMW), Diablo
+(DevilutionX), Heroes of Might and Magic III (VCMI), Command & Conquer (OpenRA),
+Ultima VII (Exult) e Warcraft II (Wargus).
+
+Se instalar, ponha um `launch.sh` na pasta `.pc` e a entrada de menu passa a
+apontar pra ele em vez do `play.sh`:
+
+```bash
+#!/usr/bin/env bash
+exec flatpak run io.github.noxworld_dev.OpenNox "-data=$(dirname "$(readlink -f "$0")")" -fullscreen "$@"
+```
+
+Apagando o arquivo, o caminho do wine volta.
+
+---
+
 ## Backup dos jogos salvos
 
 Jogo antigo guarda save ao lado de si; jogo moderno grava no perfil do wine. O

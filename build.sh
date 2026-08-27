@@ -48,6 +48,7 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_SCUMM_BATO="/userdata/roms/scummvm/"
     M_NO_AUTORUN="Nenhum autorun.cmd gerado - seria inutil. Veja o README."
     M_DONE="pronto: %s (CMD=%s)\n"
+    M_PORT="obs: %s tem motor reimplementado (%s) - nativo, melhor que wine: %s\n"
     M_DXCFG="obs: dxcfg.ini estava em janela; mudei para tela cheia (edite o arquivo para voltar)"
     M_REG="obs: gog-registry.reg gerado; o play.sh aplica ao criar o prefixo"
     M_WRAPPERS="obs: wrappers do jogo tem prioridade sobre os do wine: %s\n"
@@ -80,6 +81,7 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_SCUMM_BATO="/userdata/roms/scummvm/"
     M_NO_AUTORUN="No autorun.cmd written - it would be useless. See the README."
     M_DONE="done: %s (CMD=%s)\n"
+    M_PORT="note: %s has a reimplemented engine (%s) - native, better than wine: %s\n"
     M_DXCFG="note: dxcfg.ini was set to windowed; switched to fullscreen (edit the file to revert)"
     M_REG="note: gog-registry.reg written; play.sh applies it when it creates the prefix"
     M_WRAPPERS="note: bundled wrappers given priority over wine's own: %s\n"
@@ -365,6 +367,36 @@ if [ -f "$target/dxcfg.ini" ] && grep -q '^presentation=windowed' "$target/dxcfg
   echo "$M_DXCFG"
 fi
 
+# Some of these classics have an open reimplementation of their engine, which
+# beats wine every time: native, real fullscreen, modern controllers. Say so;
+# installing it is the user's call.
+port= ; port_url=
+case " $(printf '%s %s' "$name" "$(basename "${target%.pc}")" | tr '[:upper:]' '[:lower:]') " in
+  *nox*)                      port="OpenNox";          port_url="flathub io.github.noxworld_dev.OpenNox" ;;
+  *morrowind*|*elder\ scrolls\ iii*) port="OpenMW";  port_url="openmw.org" ;;
+  *diablo*)                   port="DevilutionX";      port_url="github.com/diasurgical/devilutionX" ;;
+  *"heroes of might"*|*homm*) port="VCMI";             port_url="vcmi.eu" ;;
+  *"command & conquer"*|*"red alert"*|*"dune 2000"*|*"tiberian sun"*) port="OpenRA"; port_url="openra.net" ;;
+  *"transport tycoon"*)       port="OpenTTD";          port_url="openttd.org" ;;
+  *"theme hospital"*)         port="CorsixTH";         port_url="corsixth.com" ;;
+  *"arx fatalis"*)            port="Arx Libertatis";   port_url="arx-libertatis.org" ;;
+  *"dungeon keeper"*)         port="KeeperFX";         port_url="keeperfx.net" ;;
+  *"caesar 3"*|*"caesar iii"*) port="Augustus";        port_url="github.com/Keriew/augustus" ;;
+  *pharaoh*)                  port="Ozymandias";       port_url="github.com/Keriew/ozymandias" ;;
+  *"ultima vii"*|*"ultima 7"*) port="Exult";           port_url="exult.info" ;;
+  *daggerfall*)               port="Daggerfall Unity"; port_url="dfworkshop.net" ;;
+  *"fallout 2"*|*"fallout 1"*) port="Fallout Community Edition"; port_url="github.com/alexbatalov/fallout2-ce" ;;
+  *"baldur's gate"*|*"planescape"*|*"icewind dale"*) port="GemRB"; port_url="gemrb.org" ;;
+  *"system shock"*)           port="Shockolate";       port_url="github.com/Interrupt/systemshock" ;;
+  *descent*)                  port="DXX-Rebirth";      port_url="dxx-rebirth.com" ;;
+  *"master of orion 2"*)      port="1oom";             port_url="gitlab.com/KilgoreTroutMaskReplicant/1oom" ;;
+  *syndicate*)                port="FreeSynd";         port_url="freesynd.sourceforge.io" ;;
+  *"tomb raider"*)            port="TR1X";             port_url="github.com/LostArtefacts/TR1X" ;;
+  *"freespace 2"*)            port="Freespace Open";   port_url="fsnebula.org" ;;
+  *"warcraft ii"*|*"warcraft 2"*) port="Wargus";       port_url="wargus.github.io" ;;
+esac
+[ -n "$port" ] && printf "$M_PORT" "$name" "$port" "$port_url"
+
 printf "$M_DONE" "$target" "$exe"
 [ -n "$wrappers" ] && printf "$M_WRAPPERS" "$wrappers"
 if [ -f "$target/gog-registry.reg" ]; then
@@ -441,7 +473,12 @@ PYICON
     echo "[Desktop Entry]"
     echo "Type=Application"
     echo "Name=$name"
-    echo "Exec=$target/play.sh"
+    # a source port beats wine; drop a launch.sh in the folder and it wins
+    if [ -x "$target/launch.sh" ]; then
+      echo "Exec=$target/launch.sh"
+    else
+      echo "Exec=$target/play.sh"
+    fi
     echo "Path=$target"
     [ -n "$icon" ] && echo "Icon=$icon"
     echo "Categories=Game;"

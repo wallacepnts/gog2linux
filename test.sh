@@ -207,6 +207,18 @@ XDG_DATA_HOME="$tmp/xdg" "$here/build.sh" --desktop "$tmp/ico.pc" >/dev/null
 has icon-alt "$(cat "$tmp/xdg/applications/gog-ico.desktop")" "Icon=$tmp/ico.pc/icon.png"
 eq icon-named "$(cat "$tmp/ico.pc/icon.png")" "$(printf '\x89PNGnox')"
 
+# a classic with an open engine gets a heads-up, not a decision
+mkdir -p "$tmp/morrowind.pc"; touch "$tmp/morrowind.pc/Game.exe"
+has port-note "$("$here/build.sh" "$tmp/morrowind.pc")" "OpenMW"
+mkdir -p "$tmp/plain.pc"; touch "$tmp/plain.pc/Game.exe"
+case "$("$here/build.sh" "$tmp/plain.pc")" in *"reimplemented engine"*) echo "FAILED: invented a port"; exit 1 ;; esac
+
+# a launch.sh in the folder takes over the menu entry, for source ports
+mkdir -p "$tmp/port.pc"; touch "$tmp/port.pc/Game.exe"
+printf '#!/bin/sh\necho port\n' > "$tmp/port.pc/launch.sh"; chmod +x "$tmp/port.pc/launch.sh"
+XDG_DATA_HOME="$tmp/xdg" "$here/build.sh" --desktop "$tmp/port.pc" >/dev/null
+has port-exec "$(cat "$tmp/xdg/applications/gog-port.desktop")" "Exec=$tmp/port.pc/launch.sh"
+
 # GOG's ddraw wrapper ships windowed; packaging flips it to fullscreen
 mkdir -p "$tmp/dx.pc"; touch "$tmp/dx.pc/Game.exe"
 printf '[dxcfg]\ndisplay=desktop\npresentation=windowed\nscaling=fit\n' > "$tmp/dx.pc/dxcfg.ini"

@@ -296,6 +296,33 @@ delete `~/.local/share/applications/gog-<name>.desktop`.
 
 ---
 
+## When a native engine exists
+
+Some classics have had their engine reimplemented — open source, native, real
+fullscreen, modern controllers. That beats wine every time, so `build.sh` says
+so at the end of packaging:
+
+```
+note: Nox has a reimplemented engine (OpenNox) - native, better than wine: flathub io.github.noxworld_dev.OpenNox
+```
+
+It only tells you. Installing the port, and keeping the wine copy or not, stays
+your call. Around twenty games are recognised, among them Morrowind (OpenMW),
+Diablo (DevilutionX), Heroes of Might and Magic III (VCMI), Command & Conquer
+(OpenRA), Ultima VII (Exult) and Warcraft II (Wargus).
+
+If you do install one, drop a `launch.sh` in the `.pc` folder and the menu entry
+points at it instead of `play.sh`:
+
+```bash
+#!/usr/bin/env bash
+exec flatpak run io.github.noxworld_dev.OpenNox "-data=$(dirname "$(readlink -f "$0")")" -fullscreen "$@"
+```
+
+Delete the file and the wine path comes back.
+
+---
+
 ## Backing up saves
 
 Old games keep saves next to themselves, modern ones write into the wine
