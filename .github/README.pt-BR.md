@@ -309,27 +309,27 @@ Estes são os reconhecidos:
 
 | Jogo | Motor | Projeto |
 |---|---|---|
-| Nox | OpenNox | <https://flathub.org/apps/io.github.noxworld_dev.OpenNox> |
-| Morrowind | OpenMW | <https://openmw.org> |
-| Diablo | DevilutionX | <https://github.com/diasurgical/devilutionX> |
-| Heroes of Might and Magic III | VCMI | <https://vcmi.eu> |
-| Command & Conquer, Red Alert, Dune 2000, Tiberian Sun | OpenRA | <https://openra.net> |
-| Transport Tycoon Deluxe | OpenTTD | <https://openttd.org> |
-| Theme Hospital | CorsixTH | <https://corsixth.com> |
 | Arx Fatalis | Arx Libertatis | <https://arx-libertatis.org> |
-| Dungeon Keeper | KeeperFX | <https://keeperfx.net> |
-| Caesar III | Augustus | <https://github.com/Keriew/augustus> |
-| Pharaoh | Ozymandias | <https://github.com/Keriew/ozymandias> |
-| Ultima VII | Exult | <https://exult.info> |
-| Daggerfall | Daggerfall Unity | <https://dfworkshop.net> |
-| Fallout 1 e 2 | Fallout Community Edition | <https://github.com/alexbatalov/fallout2-ce> |
 | Baldur's Gate, Planescape: Torment, Icewind Dale | GemRB | <https://gemrb.org> |
-| System Shock | Shockolate | <https://github.com/Interrupt/systemshock> |
+| Caesar III | Augustus | <https://github.com/Keriew/augustus> |
+| Command & Conquer, Red Alert, Dune 2000, Tiberian Sun | OpenRA | <https://openra.net> |
+| Daggerfall | Daggerfall Unity | <https://dfworkshop.net> |
 | Descent 1 e 2 | DXX-Rebirth | <https://dxx-rebirth.com> |
-| Master of Orion 2 | 1oom | <https://gitlab.com/KilgoreTroutMaskReplicant/1oom> |
-| Syndicate | FreeSynd | <https://freesynd.sourceforge.io> |
-| Tomb Raider | TR1X | <https://github.com/LostArtefacts/TR1X> |
+| Diablo | DevilutionX | <https://github.com/diasurgical/devilutionX> |
+| Dungeon Keeper | KeeperFX | <https://keeperfx.net> |
+| Fallout 1 e 2 | Fallout Community Edition | <https://github.com/alexbatalov/fallout2-ce> |
 | Freespace 2 | Freespace Open | <https://fsnebula.org> |
+| Heroes of Might and Magic III | VCMI | <https://vcmi.eu> |
+| Master of Orion 2 | 1oom | <https://gitlab.com/KilgoreTroutMaskReplicant/1oom> |
+| Morrowind | OpenMW | <https://openmw.org> |
+| Nox | OpenNox | <https://flathub.org/apps/io.github.noxworld_dev.OpenNox> |
+| Pharaoh | Ozymandias | <https://github.com/Keriew/ozymandias> |
+| Syndicate | FreeSynd | <https://freesynd.sourceforge.io> |
+| System Shock | Shockolate | <https://github.com/Interrupt/systemshock> |
+| Theme Hospital | CorsixTH | <https://corsixth.com> |
+| Tomb Raider | TR1X | <https://github.com/LostArtefacts/TR1X> |
+| Transport Tycoon Deluxe | OpenTTD | <https://openttd.org> |
+| Ultima VII | Exult | <https://exult.info> |
 | Warcraft II | Wargus | <https://wargus.github.io> |
 
 O casamento é pelo nome do jogo, então uma coletânea da GOG ou uma edição com
