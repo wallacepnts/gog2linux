@@ -264,6 +264,26 @@ delete `~/.local/share/applications/gog-<name>.desktop`.
 
 ---
 
+## Backing up saves
+
+Old games keep saves next to themselves, modern ones write into the wine
+profile. `saves.sh` covers both:
+
+```bash
+./Game.pc/saves.sh                             # Game-saves-<date>.tar.gz, here
+./Game.pc/saves.sh backup /backup/game.tar.gz
+./Game.pc/saves.sh restore /backup/game.tar.gz
+```
+
+It packs `.prefix/drive_c/users` — Documents, Saved Games, AppData — plus any
+`SAVE`, `Saves`, `savegames` or `Profiles` folder in the game directory, and
+prints which ones it found.
+
+`uninstall.sh` runs a backup before deleting anything, and with `-y` it does so
+without asking. The game comes back from the installer; the saves do not.
+
+---
+
 ## Running the launcher or the bundled tools
 
 GOG games often ship more than the game: a launcher, a map editor, a key
@@ -298,6 +318,7 @@ frequently only the latter survives wine.
 | `build.sh` | GOG installer → `.pc` folder |
 | `play.sh` | runs `.pc`, `.wine`, `.wtgz` or `.wsquashfs` outside Batocera |
 | `uninstall.sh` | removes a packaged game, its prefix and its menu entries |
+| `saves.sh` | backs up and restores a game's saves, from both places they live |
 | `test.sh` | checks both (detection, parser, CRLF, native build, cache) |
 
 `play.sh` takes an optional second argument that overrides `CMD`.

@@ -17,6 +17,17 @@ for entry in "$apps"/gog-"$slug".desktop "$apps"/gog-"$slug"-uninstall.desktop; 
 done
 echo "Saves kept elsewhere are not touched."
 
+# saves are the one thing here that cannot be rebuilt from the installer
+if [ -x "$target/saves.sh" ]; then
+  if [ "${1:-}" = -y ]; then
+    "$target/saves.sh" backup 2>/dev/null || true
+  else
+    printf 'Back up the saves first? [Y/n] '
+    read -r answer
+    case "$answer" in [nN]*) ;; *) "$target/saves.sh" backup || true ;; esac
+  fi
+fi
+
 if [ "${1:-}" != -y ]; then
   printf 'Remove it? [y/N] '
   read -r answer

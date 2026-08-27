@@ -141,6 +141,30 @@ mkdir -p "$tmp/wrap.pc"; touch "$tmp/wrap.pc/Game.exe" "$tmp/wrap.pc/ddraw.dll" 
 has wrappers "$(cat "$tmp/wrap.pc/autorun.cmd")" 'ENV=WINEDLLOVERRIDES="ddraw,dinput=n,b"'
 case "$(cat "$tmp/wrap.pc/autorun.cmd")" in *UnityPlayer*) echo "FAILED: overrode a DLL wine does not provide"; exit 1 ;; esac
 
+# saves.sh finds both places a game keeps saves, and puts them back
+mkdir -p "$tmp/sv2.pc/SAVE" "$tmp/sv2.pc/.prefix/drive_c/users/w/Documents"
+touch "$tmp/sv2.pc/Game.exe"
+printf '{"name":"Sv","playTasks":[{"category":"game","path":"Game.exe"}]}' > "$tmp/sv2.pc/goggame-9.info"
+"$here/build.sh" --no-desktop "$tmp/sv2.pc" >/dev/null
+echo old > "$tmp/sv2.pc/SAVE/slot1.dat"
+echo doc > "$tmp/sv2.pc/.prefix/drive_c/users/w/Documents/save.txt"
+"$tmp/sv2.pc/saves.sh" backup "$tmp/bk.tar.gz" >/dev/null
+rm -rf "$tmp/sv2.pc/SAVE" "$tmp/sv2.pc/.prefix/drive_c/users"
+"$tmp/sv2.pc/saves.sh" restore "$tmp/bk.tar.gz" >/dev/null
+eq save-game "$(cat "$tmp/sv2.pc/SAVE/slot1.dat")" "old"
+eq save-prefix "$(cat "$tmp/sv2.pc/.prefix/drive_c/users/w/Documents/save.txt")" "doc"
+
+# uninstalling backs the saves up before it deletes anything
+mkdir -p "$tmp/bye.pc/SAVE"; touch "$tmp/bye.pc/Game.exe"
+printf '{"name":"Bye","playTasks":[{"category":"game","path":"Game.exe"}]}' > "$tmp/bye.pc/goggame-9.info"
+"$here/build.sh" --no-desktop "$tmp/bye.pc" >/dev/null
+echo keep > "$tmp/bye.pc/SAVE/slot1.dat"
+( cd "$tmp" && XDG_DATA_HOME="$tmp/xdg" "$tmp/bye.pc/uninstall.sh" -y >/dev/null )
+[ ! -d "$tmp/bye.pc" ] || { echo "FAILED: folder survived"; exit 1; }
+bk=("$tmp"/bye-saves-*.tar.gz)
+[ ${#bk[@]} -eq 1 ] || { echo "FAILED: no save backup left behind"; exit 1; }
+eq save-rescued "$(tar xzf "${bk[0]}" -O SAVE/slot1.dat)" "keep"
+
 # the uninstaller lands in the folder and takes the game and both entries away
 mkdir -p "$tmp/gone.pc"; touch "$tmp/gone.pc/Game.exe"
 printf '{"name":"Gone","playTasks":[{"category":"game","path":"Game.exe"}]}' > "$tmp/gone.pc/goggame-9.info"

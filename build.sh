@@ -256,7 +256,7 @@ done
   printf 'CMD=%s\n' "$exe"
 } > "$target/autorun.cmd"
 here=$(dirname "$(readlink -f "$0")")
-cp "$here/play.sh" "$here/uninstall.sh" "$target/"
+cp "$here/play.sh" "$here/uninstall.sh" "$here/saves.sh" "$target/"
 echo "done: $target (CMD=$exe)"
 [ -n "$wrappers" ] && echo "note: bundled wrappers given priority over wine's own: $wrappers"
 if [ -f "$target/gog-registry.reg" ]; then
