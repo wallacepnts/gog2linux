@@ -8,6 +8,21 @@ shopt -s dotglob nullglob
 
 die() { echo "$*" >&2; exit 1; }
 
+# GOG labels languages by code; a list of codes is not a menu anyone can read.
+lang_name() {
+  case "$1" in
+    en*) echo "English" ;;      de*) echo "Deutsch" ;;     fr*) echo "Francais" ;;
+    es-MX) echo "Espanol (LA)" ;; es*) echo "Espanol" ;;   it*) echo "Italiano" ;;
+    pt-BR) echo "Portugues (BR)" ;; pt*) echo "Portugues" ;; ru*) echo "Russkiy" ;;
+    pl*) echo "Polski" ;;       cs*) echo "Cestina" ;;     hu*) echo "Magyar" ;;
+    nl*) echo "Nederlands" ;;   sv*) echo "Svenska" ;;     da*) echo "Dansk" ;;
+    fi*) echo "Suomi" ;;        no*) echo "Norsk" ;;       tr*) echo "Turkce" ;;
+    ja*) echo "Nihongo" ;;      ko*) echo "Hangugeo" ;;    th*) echo "Thai" ;;
+    zh-Hans) echo "Zhongwen (jianti)" ;; zh-Hant) echo "Zhongwen (fanti)" ;;
+    zh*) echo "Zhongwen" ;;     ar*) echo "Arabiy" ;;      *) echo "$1" ;;
+  esac
+}
+
 # Messages in the two languages this is used in. Picked from $LANG; force with
 # GOG2LINUX_LANG=pt or =en. No gettext, no .po files, no runtime dependency.
 case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
@@ -19,7 +34,8 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_NO_SETUP="instalador nao encontrado: %s\n"
     M_OFFERS="%s oferece %s idiomas:\n"
     M_ASK_LANG="Idioma [%s]: "
-    M_LANG="idioma: %s\n"
+    M_LANG="idioma: %s (%s)\n"
+    M_ONLY_LANG="idioma: %s (%s) - o unico que este instalador traz\n"
     M_META="nao consegui ler os metadados da GOG (veja o erro do python acima)"
     M_NO_EXE="nao achei o executavel do jogo em %s\n"
     M_EXTRACTED="extraido: %s\n"
@@ -49,7 +65,8 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_NO_SETUP="installer not found: %s\n"
     M_OFFERS="%s offers %s languages:\n"
     M_ASK_LANG="Language [%s]: "
-    M_LANG="language: %s\n"
+    M_LANG="language: %s (%s)\n"
+    M_ONLY_LANG="language: %s (%s) - the only one this installer carries\n"
     M_META="could not read the GOG metadata (see the python error above)"
     M_NO_EXE="could not find the game executable in %s\n"
     M_EXTRACTED="extracted: %s\n"
@@ -117,7 +134,12 @@ if [ $# -gt 0 ]; then
       # more than one language and someone watching: let them pick
       if [ "$count" -gt 1 ] && [ -t 0 ]; then
         printf "$M_OFFERS" "$(basename "$setup")" "$count"
-        printf '%s\n' "$offered" | nl -w4 -s') '
+        i=0
+        while IFS= read -r code; do
+          [ -n "$code" ] || continue
+          i=$((i + 1))
+          printf '  %2d) %-8s %s\n' "$i" "$code" "$(lang_name "$code")"
+        done <<< "$offered"
         printf "$M_ASK_LANG" "${pick:-1}"
         read -r answer
         case "$answer" in
@@ -130,7 +152,14 @@ if [ $# -gt 0 ]; then
       [ -n "$pick" ] && lang=$pick
     fi
     opts=()
-    [ -n "$pick" ] && [ "$pick" != all ] && opts+=(--language "$pick") && printf "$M_LANG" "$pick"
+    if [ -n "$pick" ] && [ "$pick" != all ]; then
+      opts+=(--language "$pick")
+      if [ "${count:-1}" -le 1 ]; then
+        printf "$M_ONLY_LANG" "$pick" "$(lang_name "$pick")"
+      else
+        printf "$M_LANG" "$pick" "$(lang_name "$pick")"
+      fi
+    fi
     innoextract --gog --silent --collisions=overwrite "${opts[@]}" -d "$target" "$setup"
   done
   # installer scaffolding. Only after extracting: in reclassify mode that tmp/

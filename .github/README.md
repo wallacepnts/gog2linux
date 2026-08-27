@@ -73,15 +73,28 @@ writing `autorun.cmd` and tells you which system to use instead.
 
    ```
    setup_final_fantasy_iii.exe offers 10 languages:
-      1) de-DE
-      2) en-US
+      1) de-DE    Deutsch
+      2) en-US    English
+      3) es-ES    Espanol
       ...
+     10) zh-Hant  Zhongwen (fanti)
    Language [en-US]:
    ```
 
-   Enter takes English. The choice carries over to the DLCs in the same run. In
-   a script there is no question: pass `--lang it-IT`, or `--lang all` to keep
-   every language, and with neither it picks `en-*` silently.
+   Answer with the number or the code. Enter takes English, and the choice
+   carries over to the DLCs in the same run. When the installer carries a single
+   language it says so instead of asking:
+
+   ```
+   language: en-US (English) - the only one this installer carries
+   ```
+
+   That line matters: a GOG store page may advertise four localizations while
+   the installer you downloaded holds one. The others are separate downloads;
+   pass them all on the same command line, like DLCs.
+
+   In a script there is no question: `--lang it-IT` picks one, `--lang all`
+   keeps every language, and with neither it takes `en-*` silently.
 5. **Copy the whole folder** to Batocera, minus `.prefix/` (that's the local
    prefix, ~400 MB, and Batocera doesn't use it).
 6. **Keep `/userdata/` on btrfs or ext4.** NTFS breaks wine, Steam/Galaxy games

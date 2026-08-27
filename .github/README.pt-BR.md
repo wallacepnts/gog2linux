@@ -71,16 +71,29 @@ antes de gerar o `autorun.cmd` e diz qual sistema usar.
    instalador oferece mais de um idioma, o `build.sh` lista e espera:
 
    ```
-   setup_final_fantasy_iii.exe offers 10 languages:
-      1) de-DE
-      2) en-US
+   setup_final_fantasy_iii.exe oferece 10 idiomas:
+      1) de-DE    Deutsch
+      2) en-US    English
+      3) es-ES    Espanol
       ...
-   Language [en-US]:
+     10) zh-Hant  Zhongwen (fanti)
+   Idioma [en-US]:
    ```
 
-   Enter aceita o inglês. A escolha vale também para as DLCs da mesma execução.
-   Em script não há pergunta: passe `--lang it-IT`, ou `--lang all` para guardar
-   todos; sem nenhum dos dois ele escolhe `en-*` calado.
+   Responda com o número ou o código. Enter aceita inglês, e a escolha vale
+   também para as DLCs da mesma execução. Quando o instalador traz um idioma só,
+   ele avisa em vez de perguntar:
+
+   ```
+   idioma: en-US (English) - o unico que este instalador traz
+   ```
+
+   Essa linha importa: a página da GOG pode anunciar quatro localizações
+   enquanto o instalador que você baixou tem uma. As outras são downloads
+   separados; passe todos na mesma linha de comando, como se fossem DLCs.
+
+   Em script não há pergunta: `--lang it-IT` escolhe um, `--lang all` guarda
+   todos, e sem nenhum dos dois ele pega `en-*` calado.
 5. **Copie a pasta inteira** pro Batocera, sem o `.prefix/` (é o prefixo local,
    pesa uns 400 MB e o Batocera não usa).
 6. **`/userdata/` em btrfs ou ext4.** NTFS quebra wine, principalmente jogos
