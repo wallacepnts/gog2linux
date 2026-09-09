@@ -32,7 +32,7 @@ want a Microsoft DLL).
 ## The universal rule: any GOG game in 3 steps
 
 **Whatever sits in `install/` is a game.** One folder per game, with its DLCs in
-a `dlc/` inside it — or a loose installer, when the game has no DLC:
+a `dlc/` inside it — or a loose installer, when there is no DLC:
 
 ```
 install/
@@ -45,6 +45,9 @@ install/
         ├── setup_grim_dawn_ashes_of_malmouth_(51951).exe
         └── setup_grim_dawn_forgotten_gods_(51951).exe
 ```
+
+Drop the `.bin` files next to the `.exe` and forget them: innoextract pulls the
+parts together on its own.
 
 ```bash
 # 1. package everything sitting in install/
@@ -68,130 +71,39 @@ installing into: /home/you/Games
 Install which? [Enter = all; e.g. 1 3, or 1-2]:
 ```
 
-Enter takes everything; `1 3` picks individually, `1-2` is a range, and commas
-work too. In a script, with no terminal, there is no question: the whole inbox
-gets packaged.
+Enter takes everything, `1 3` picks individually, `1-2` is a range. With no
+terminal it packages the lot without asking.
 
-**The name comes out of the installer header** — the same one GOG uses, and you
-type none of it. When the name came from there, the right-hand column shows what
-it came from, as in items 1 and 2 above; when the header says nothing, the
-folder's own name stands, as in item 3. The games are installed into `~/Games`,
-or `~/Jogos` on a Portuguese system — the same `$LANG` that picks the language of
-these messages picks the folder. Not beside `install/`: that one is an inbox and
-gets emptied, and on a fresh checkout it sits in the repo, which is no place for
-twenty gigabytes of game. Anything
-in there that is not an InnoSetup installer is skipped with a note; `.bin` files
-are the parts and stay quiet.
+The `.pc` name comes out of the installer header, the same one GOG uses — the
+right-hand column shows where it came from, and with no readable header the
+folder's own name stands (item 3). The games go to `~/Games`, or `~/Jogos` on a
+Portuguese system.
 
-One game per run, each in its own process: a bad installer costs its own game,
-not the whole batch. At the end, if every game made it, you are asked whether
-the installers **of the games it packaged** may go — whatever you left for later
-stays put. The default is **no**, say yes once the games start. If any game
-failed, nothing is deleted: the installers are the only thing that can rebuild
-the folder.
+One game per process: a bad installer costs its own game, not the batch. At the
+end it asks whether the installers **of the games it packaged** may go — the
+default is **no**, say yes once they start. If any game failed, nothing is
+deleted.
 
-`build.sh` extracts the base installer and the DLCs into the same folder (DLCs
-overwrite and merge), throws away the installer scaffolding (`tmp/`,
-`__redist/`), reads `goggame-*.info` to find the right executable and writes
-`autorun.cmd`. If it spots a DOSBox or ScummVM game in disguise, it stops before
-writing `autorun.cmd` and tells you which system to use instead.
+On its own it also merges the DLCs into the same folder, throws away the
+installer scaffolding (`tmp/`, `__redist/`), reads `goggame-*.info` to find the
+executable and writes `autorun.cmd`. If it is a DOSBox or ScummVM game in
+disguise, it stops before that and says which system to use.
 
 **Rules that always apply:**
 
-1. **Pass the `.exe`, never the `.bin` files.** Large GOG installers ship as
-   `setup_game.exe` + `setup_game-1.bin` + `setup_game-2.bin`. innoextract's
-   `--gog` pulls them together on its own — the `.bin` files only need to sit in
-   the same folder.
-2. **DLCs come along when you pass the folder**, from `dlc/` (or any
-   subfolder). Passing files one by one, the order matters: base first, DLCs
-   after. And **no brackets** — in the `usage:` line they only mark what is
-   optional; copied along, they become part of the path and `build.sh` stops
-   with `installer not found: [/...`.
-3. **Multi-language installers ask, and default to English.** GOG ships one
-   installer with every language inside; extracting all of them lets the last
-   one win the metadata, which is how an English game comes out Italian. When
-   the installer offers more than one language, `build.sh` lists them and waits:
+1. **Multi-language installers ask, and default to English.** GOG ships one
+   installer with every language inside, and extracting all of them lets the
+   last one win the metadata — which is how an English game comes out Italian.
+   `build.sh` lists them and waits; Enter takes English, and the choice carries
+   to the DLCs in the same run. In a script, `--lang it-IT` or `--lang all`.
 
-   ```
-   setup_final_fantasy_iii.exe offers 10 languages:
-      1) de-DE    Deutsch
-      2) en-US    English
-      3) es-ES    Espanol
-      ...
-     10) zh-Hant  Zhongwen (fanti)
-   Language [en-US]:
-   ```
-
-   Answer with the number or the code. Enter takes English, and the choice
-   carries over to the DLCs in the same run. When the installer carries a single
-   language it says so instead of asking:
-
-   ```
-   language: en-US (English) - the only one this installer carries
-   ```
-
-   That line matters: a GOG store page may advertise four localizations while
-   the installer you downloaded holds one. The others are separate downloads;
-   drop them all in the same folder, or pass them all on the same command line,
-   like DLCs.
-
-   In a script there is no question: `--lang it-IT` picks one, `--lang all`
-   keeps every language, and with neither it takes `en-*` silently.
-4. **Copy the whole folder** to Batocera, minus `.prefix/` (that's the local
-   prefix, ~400 MB, and Batocera doesn't use it).
-5. **Keep `/userdata/` on btrfs or ext4.** NTFS breaks wine, Steam/Galaxy games
-   especially.
-6. **The folder name is the name shown** in EmulationStation.
-
----
-
-## Other ways to package
-
-`install/` is the short path, not the only one. A target and installers still
-work on the command line — that is what to use to package without touching the
-inbox, or to pick the `.pc` name, which inside `install/` comes from the
-installer:
-
-```bash
-# a folder holding the installers becomes the .pc of the same name
-./build.sh grimdawn                                 # grimdawn/ -> grimdawn.pc
-
-# the folder GOG handed you, with whatever destination you pick
-./build.sh Game.pc "/path/Game_1.2.3_(58051)_win_gog"
-
-# or loose paths, in order base -> DLCs
-./build.sh Game.pc "/path/setup_game.exe" "/path/DLC/setup_dlc.exe"
-
-# and with no installer at all, a re-read of an already extracted folder
-./build.sh Game.pc
-```
-
-That last one is the repair mode: it re-reads `goggame-*.info`, runs the
-detection again and rewrites `autorun.cmd` without extracting anything. Run it
-after editing the folder by hand, or to add a menu entry to a game that is
-already packaged (`./build.sh --desktop Game.pc`).
-
-**Quote the path.** GOG-Games filenames almost always carry parentheses or
-spaces, and unquoted, bash complains with `syntax error near unexpected token
-'('`:
-
-```bash
-./build.sh Game.pc "/path/game (45311)/setup_game_(arbys)_(45311).exe"
-./build.sh Game.pc ~/"Downloads/game (45311)/setup.exe"   # tilde outside the quotes
-```
-
-`~` does not expand inside quotes — use `$HOME` or leave the tilde out. When in
-doubt, type the beginning and hit **Tab**; bash escapes it for you. None of this
-comes up in `install/`, where you type no paths at all.
-
-Neither end has to stay where it is:
-
-```bash
-GOG2LINUX_INBOX=/mnt/hd/downloads ./build.sh    # where to read from
-GOG2LINUX_GAMES=/mnt/hd/games ./build.sh        # where to install
-```
-
-Worth knowing when home is a small partition: one GOG game passes 20 GB easily.
+   GOG's page may advertise four localisations while the installer carries one:
+   the others are separate downloads, and go in the same folder as the game.
+2. **Copy the whole folder** to Batocera, minus `.prefix/` (that's the local
+   prefix, some 400 MB, and Batocera doesn't use it).
+3. **Keep `/userdata/` on btrfs or ext4.** NTFS breaks wine, Steam/Galaxy games
+   worst of all.
+4. **The folder name is the name shown** in EmulationStation.
 
 ---
 
@@ -302,6 +214,12 @@ SAVEDIR=drive_c/users/...         # optional, Batocera v42+
 ```
 
 Arguments ride along with `CMD`: `CMD="My Game.exe" --fullscreen`
+
+`SCREEN=native` is written by `build.sh` for a Unity game. At launch `play.sh`
+reads the screen's preferred mode from `/sys/class/drm/*/modes` — no `xrandr`, so
+Batocera has it too — and appends `-screen-width`, `-screen-height` and
+`-screen-fullscreen 1`. The numbers belong to the machine that plays, not the one
+that packaged. `GOG2LINUX_SCREEN=1280x720` pins a size, `=no` turns it off.
 
 ---
 
@@ -486,6 +404,40 @@ Worth knowing: GOG usually marks the **launcher** as primary, which is why the
 game entry is preferred instead — a launcher needs a mouse and often starts a
 build wine cannot run. Old titles ship both a classic and a DirectX build, and
 frequently only the latter survives wine.
+
+---
+
+## Other ways to package
+
+`install/` is the standard path. When you want to pick the `.pc` name, or
+package something that lives outside the inbox, the target goes on the command
+line:
+
+```bash
+./build.sh grimdawn                              # grimdawn/ -> grimdawn.pc
+./build.sh Game.pc "/path/Game_(58051)_win_gog"  # GOG's folder as it came
+./build.sh Game.pc "/path/setup.exe" "/path/DLC/dlc.exe"
+./build.sh Game.pc                               # no installer: just a re-read
+```
+
+That last one is the repair mode: it runs the detection again and rewrites
+`autorun.cmd` without extracting anything. Use it after editing the folder by
+hand, or to add a menu entry to a finished game (`./build.sh --desktop Game.pc`).
+
+Here you type the paths, so **quote them** — GOG-Games filenames almost always
+carry parentheses, and unquoted, bash complains with `syntax error`. `~` does not
+expand inside quotes: leave the tilde out, or hit **Tab** and let bash escape it.
+And no brackets; in the `usage:` line they only mark what is optional, and copied
+along they become part of the path.
+
+Both ends of `install/` move too:
+
+```bash
+GOG2LINUX_INBOX=/mnt/hd/downloads ./build.sh    # where to read from
+GOG2LINUX_GAMES=/mnt/hd/games ./build.sh        # where to install
+```
+
+Worth it when home is a small partition: one GOG game passes 20 GB easily.
 
 ---
 

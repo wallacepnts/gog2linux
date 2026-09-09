@@ -32,7 +32,7 @@ Extras conforme o caso: `squashfs-tools` (abrir `.wsquashfs`), `winetricks`
 ## Regra universal: qualquer jogo GOG em 3 passos
 
 **Tudo que estiver em `install/` é um jogo.** Uma pasta por jogo, com as DLCs
-numa `dlc/` dentro dela — ou o instalador solto, quando o jogo não tem DLC:
+numa `dlc/` dentro dela — ou o instalador solto, quando não há DLC:
 
 ```
 install/
@@ -46,6 +46,9 @@ install/
         └── setup_grim_dawn_forgotten_gods_(51951).exe
 ```
 
+Largue os `.bin` junto do `.exe` e esqueça deles: o innoextract junta as partes
+sozinho.
+
 ```bash
 # 1. empacotar tudo que estiver em install/
 ./build.sh
@@ -57,7 +60,7 @@ install/
 cp -r ~/Jogos/"Grim Dawn.pc" /userdata/roms/windows/
 ```
 
-Ele lista o que achou e deixa você escolher:
+Ele lista o que achou e deixa escolher:
 
 ```
 install/: 3 jogo(s) encontrado(s)
@@ -68,125 +71,37 @@ instalando em: /home/voce/Jogos
 Instalar quais? [Enter = todos; ex: 1 3, ou 1-2]:
 ```
 
-Enter leva tudo; `1 3` escolhe avulsos, `1-2` é faixa, e vírgula também vale.
-Em script, sem terminal, não há pergunta: empacota a caixa inteira.
+Enter leva tudo, `1 3` escolhe avulsos, `1-2` é faixa. Sem terminal, empacota
+tudo sem perguntar.
 
-**O nome sai do cabeçalho do instalador** — é o mesmo que a GOG usa, e você não
-digita nada. Quando o nome vem de lá, a coluna da direita mostra de onde saiu,
-como nos itens 1 e 2 acima; quando o cabeçalho não diz nada, fica valendo o nome
-da pasta, como no item 3. Os jogos são instalados em `~/Jogos`, ou `~/Games` num
-sistema em inglês — o mesmo `$LANG` que escolhe o idioma destas mensagens escolhe
-a pasta. Não ao lado do `install/`: aquilo é caixa de entrada e vai ser
-esvaziado, e num clone novo fica dentro do repo, que não é lugar pra vinte
-gigabytes de jogo. O que não for instalador InnoSetup é ignorado com aviso; os
-`.bin` são as partes e ficam quietos.
+O nome do `.pc` sai do cabeçalho do instalador, o mesmo que a GOG usa — a coluna
+da direita mostra de onde veio, e sem cabeçalho legível vale o nome da pasta
+(item 3). Os jogos vão pra `~/Jogos`, ou `~/Games` num sistema em inglês.
 
-Um jogo por vez, cada um no seu processo: instalador ruim custa o próprio jogo,
-não a leva inteira. No fim, se todos deram certo, ele pergunta se pode apagar os
-instaladores **dos jogos que empacotou** — o que você deixou pra depois continua
-lá. Padrão **não**, diga sim quando os jogos abrirem. Se algum falhar, nada é
-apagado: os instaladores são a única coisa que reconstrói a pasta.
+Um jogo por processo: instalador ruim custa o próprio jogo, não a leva. No fim
+ele pergunta se pode apagar os instaladores **dos jogos que empacotou** — padrão
+**não**, diga sim quando eles abrirem. Se algum falhar, nada é apagado.
 
-O `build.sh` extrai o instalador base e as DLCs na mesma pasta (as DLCs
-sobrescrevem/mesclam), joga fora o andaime do instalador (`tmp/`, `__redist/`),
-lê o `goggame-*.info` pra descobrir o executável certo e escreve o
-`autorun.cmd`. Se perceber que é um jogo DOSBox ou ScummVM embrulhado, ele para
-antes de gerar o `autorun.cmd` e diz qual sistema usar.
+Sozinho ele ainda mescla as DLCs na mesma pasta, joga fora o andaime do
+instalador (`tmp/`, `__redist/`), lê o `goggame-*.info` pra achar o executável e
+escreve o `autorun.cmd`. Se for DOSBox ou ScummVM disfarçado, para antes e diz
+qual sistema usar.
 
 **Regras que valem sempre:**
 
-1. **Passe o `.exe`, nunca os `.bin`.** Instalador GOG grande vem como
-   `setup_jogo.exe` + `setup_jogo-1.bin` + `setup_jogo-2.bin`. O `--gog` do
-   innoextract junta tudo sozinho — os `.bin` só precisam estar na mesma pasta.
-2. **DLC vem junto quando você passa a pasta**, em `dlc/` (ou qualquer
-   subpasta). Passando arquivo por arquivo, a ordem importa: base primeiro,
-   DLCs depois. E **sem colchetes** — na linha `uso:` eles só marcam o que é
-   opcional; copiados junto, viram parte do caminho e o `build.sh` para com
-   `instalador nao encontrado: [/...`.
-3. **Instalador multi-idioma pergunta, e assume inglês.** A GOG entrega um
-   instalador só, com todos os idiomas dentro; extrair tudo faz o último vencer
-   os metadados — é assim que um jogo em inglês termina em italiano. Quando o
-   instalador oferece mais de um idioma, o `build.sh` lista e espera:
+1. **Instalador multi-idioma pergunta, e assume inglês.** A GOG entrega um
+   instalador só com todos os idiomas dentro, e extrair tudo faz o último vencer
+   os metadados — é assim que um jogo em inglês termina em italiano. O
+   `build.sh` lista e espera; Enter aceita inglês, e a escolha vale pras DLCs da
+   mesma execução. Em script, `--lang it-IT` ou `--lang all`.
 
-   ```
-   setup_final_fantasy_iii.exe oferece 10 idiomas:
-      1) de-DE    Deutsch
-      2) en-US    English
-      3) es-ES    Espanol
-      ...
-     10) zh-Hant  Zhongwen (fanti)
-   Idioma [en-US]:
-   ```
-
-   Responda com o número ou o código. Enter aceita inglês, e a escolha vale
-   também para as DLCs da mesma execução. Quando o instalador traz um idioma só,
-   ele avisa em vez de perguntar:
-
-   ```
-   idioma: en-US (English) - o unico que este instalador traz
-   ```
-
-   Essa linha importa: a página da GOG pode anunciar quatro localizações
-   enquanto o instalador que você baixou tem uma. As outras são downloads
-   separados; jogue todos na mesma pasta, ou passe todos na mesma linha de
-   comando, como se fossem DLCs.
-
-   Em script não há pergunta: `--lang it-IT` escolhe um, `--lang all` guarda
-   todos, e sem nenhum dos dois ele pega `en-*` calado.
-4. **Copie a pasta inteira** pro Batocera, sem o `.prefix/` (é o prefixo local,
+   A página da GOG pode anunciar quatro localizações e o instalador trazer uma:
+   as outras são downloads separados, e vão na mesma pasta do jogo.
+2. **Copie a pasta inteira** pro Batocera, sem o `.prefix/` (é o prefixo local,
    pesa uns 400 MB e o Batocera não usa).
-5. **`/userdata/` em btrfs ou ext4.** NTFS quebra wine, principalmente jogos
+3. **`/userdata/` em btrfs ou ext4.** NTFS quebra wine, principalmente jogos
    Steam/Galaxy.
-6. **Nome da pasta = nome que aparece na lista** do EmulationStation.
-
----
-
-## Outros jeitos de empacotar
-
-O `install/` é o caminho curto, não o único. Alvo e instaladores continuam
-valendo na linha de comando — é o que usar pra empacotar sem mexer na caixa, ou
-pra escolher o nome do `.pc`, que no `install/` vem do instalador:
-
-```bash
-# uma pasta com os instaladores vira o .pc de mesmo nome
-./build.sh grimdawn                                 # grimdawn/ -> grimdawn.pc
-
-# a pasta que a GOG entregou, com o destino que você escolher
-./build.sh Jogo.pc "/caminho/Jogo_1.2.3_(58051)_win_gog"
-
-# ou os caminhos avulsos, na ordem base -> DLCs
-./build.sh Jogo.pc "/caminho/setup_jogo.exe" "/caminho/DLC/setup_dlc.exe"
-
-# e, sem instalador nenhum, releitura de uma pasta já extraída
-./build.sh Jogo.pc
-```
-
-O último é o modo de conserto: relê o `goggame-*.info`, refaz a detecção e
-reescreve o `autorun.cmd` sem extrair nada. É o que rodar depois de mexer na
-pasta na mão, ou pra criar a entrada de menu de um jogo já empacotado
-(`./build.sh --desktop Jogo.pc`).
-
-**Ponha o caminho entre aspas.** Nome da GOG-Games quase sempre tem parêntese ou
-espaço, e sem aspas o bash reclama de
-`erro de sintaxe próximo ao token inesperado '('`:
-
-```bash
-./build.sh Jogo.pc "/caminho/game (45311)/setup_jogo_(arbys)_(45311).exe"
-./build.sh Jogo.pc ~/"HD/Downloads/game (45311)/setup.exe"   # til fora das aspas
-```
-
-`~` não expande dentro de aspas — use `$HOME` ou deixe o til de fora. Na dúvida,
-digite o começo e complete com **Tab**, que o bash escapa sozinho. Nada disso
-aparece no `install/`, onde você não digita caminho nenhum.
-
-Nenhuma das duas pontas precisa ficar onde está:
-
-```bash
-GOG2LINUX_INBOX=/mnt/hd/downloads ./build.sh    # de onde ler
-GOG2LINUX_GAMES=/mnt/hd/jogos ./build.sh        # onde instalar
-```
-
-Vale saber quando a home é uma partição pequena: jogo GOG passa dos 20 GB fácil.
+4. **Nome da pasta = nome que aparece na lista** do EmulationStation.
 
 ---
 
@@ -298,10 +213,9 @@ Argumentos vão junto do `CMD`: `CMD="Meu Jogo.exe" --fullscreen`
 
 O `SCREEN=native` o `build.sh` escreve sozinho em jogo Unity. Na hora de rodar,
 o `play.sh` lê o modo preferido da tela em `/sys/class/drm/*/modes` — sem
-`xrandr`, então funciona no Batocera também — e acrescenta `-screen-width`,
-`-screen-height` e `-screen-fullscreen 1` ao `CMD`. Os números são da máquina
-que joga, não da que empacotou, que é o motivo de não virem prontos no arquivo.
-`GOG2LINUX_SCREEN=1280x720` fixa um tamanho, `GOG2LINUX_SCREEN=no` desliga.
+`xrandr`, então o Batocera também tem — e acrescenta `-screen-width`,
+`-screen-height` e `-screen-fullscreen 1`. Os números são da máquina que joga,
+não da que empacotou. `GOG2LINUX_SCREEN=1280x720` fixa um tamanho, `=no` desliga.
 
 ---
 
@@ -487,6 +401,39 @@ Vale saber: a GOG normalmente marca o **launcher** como primário, e é por isso
 que a entrada do jogo tem preferência — launcher precisa de mouse e muitas
 vezes dispara uma build que o wine não roda. Títulos antigos trazem uma versão
 clássica e uma DirectX, e com frequência só a segunda sobrevive ao wine.
+
+---
+
+## Outros jeitos de empacotar
+
+O `install/` é o caminho padrão. Quando quiser escolher o nome do `.pc`, ou
+empacotar algo que está fora da caixa, o alvo vai na linha de comando:
+
+```bash
+./build.sh grimdawn                                  # grimdawn/ -> grimdawn.pc
+./build.sh Jogo.pc "/caminho/Jogo_(58051)_win_gog"   # pasta da GOG como veio
+./build.sh Jogo.pc "/caminho/setup.exe" "/caminho/DLC/dlc.exe"
+./build.sh Jogo.pc                                   # sem instalador: só relê
+```
+
+O último é o modo de conserto: refaz a detecção e o `autorun.cmd` sem extrair
+nada. É o que usar depois de mexer na pasta na mão, ou pra criar a entrada de
+menu de um jogo já pronto (`./build.sh --desktop Jogo.pc`).
+
+Aqui os caminhos são digitados, então **ponha entre aspas** — nome da GOG-Games
+quase sempre tem parêntese, e sem aspas o bash reclama de `erro de sintaxe`. O
+`~` não expande dentro delas: deixe o til de fora, ou complete com **Tab**, que
+o bash escapa sozinho. E nada de colchetes; na linha `uso:` eles só marcam o que
+é opcional, e copiados junto viram parte do caminho.
+
+As duas pontas do `install/` também se movem:
+
+```bash
+GOG2LINUX_INBOX=/mnt/hd/downloads ./build.sh    # de onde ler
+GOG2LINUX_GAMES=/mnt/hd/jogos ./build.sh        # onde instalar
+```
+
+Vale quando a home é uma partição pequena: jogo GOG passa dos 20 GB fácil.
 
 ---
 
