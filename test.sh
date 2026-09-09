@@ -33,8 +33,8 @@ mkdir -p "$tmp/none"
 ! "$here/build.sh" "$tmp/br.pc" "[$tmp/gog/base.exe" >/dev/null 2>&1 || { echo "FAILED: accepted a bracketed path"; exit 1; }
 
 # one folder per game: <name>/ holding setup_*.exe (and dlc/) becomes <name>.pc
-mkdir -p "$tmp/being/dlc"; touch "$tmp/being/setup_g.exe" "$tmp/being/dlc/setup_d.exe"
-has staging "$("$here/build.sh" "$tmp/being" 2>&1 || true)" "$tmp/being -> $tmp/being.pc"
+mkdir -p "$tmp/grimdawn/dlc"; touch "$tmp/grimdawn/setup_g.exe" "$tmp/grimdawn/dlc/setup_d.exe"
+has staging "$("$here/build.sh" "$tmp/grimdawn" 2>&1 || true)" "$tmp/grimdawn -> $tmp/grimdawn.pc"
 
 # an extracted folder without the .pc suffix is still only reclassified: its own
 # .exe files are the game, not installers waiting to be run
@@ -44,17 +44,17 @@ has plain "$("$here/build.sh" "$tmp/plain")" "CMD=game.exe"
 
 # install/ is the inbox: every folder is a game, every loose file that carries an
 # InnoSetup header is a game, and anything else is left alone
-mkdir -p "$tmp/inbox/being/dlc"
-touch "$tmp/inbox/being/setup_g.exe" "$tmp/inbox/being/dlc/setup_d.exe" "$tmp/inbox/junk.exe"
+mkdir -p "$tmp/inbox/grimdawn/dlc"
+touch "$tmp/inbox/grimdawn/setup_g.exe" "$tmp/inbox/grimdawn/dlc/setup_d.exe" "$tmp/inbox/junk.exe"
 inbox=$(GOG2LINUX_INBOX="$tmp/inbox" "$here/build.sh" 2>&1 || true)
 has inbox "$inbox" "1 game(s) found"
 has inbox-skip "$inbox" "not an InnoSetup installer: junk.exe"
-has inbox-name "$inbox" "being -> being.pc"
+has inbox-name "$inbox" "grimdawn -> grimdawn.pc"
 # the game lands beside the inbox, never inside it -- the inbox gets emptied
-[ ! -e "$tmp/inbox/being.pc" ] || { echo "FAILED: built inside the inbox"; exit 1; }
+[ ! -e "$tmp/inbox/grimdawn.pc" ] || { echo "FAILED: built inside the inbox"; exit 1; }
 # a failed game keeps every installer: they are all that can rebuild it
 has inbox-fail "$inbox" "1 game(s) failed"
-[ -e "$tmp/inbox/being/setup_g.exe" ] || { echo "FAILED: deleted installers after a failure"; exit 1; }
+[ -e "$tmp/inbox/grimdawn/setup_g.exe" ] || { echo "FAILED: deleted installers after a failure"; exit 1; }
 
 # an empty inbox says what to put in it rather than exiting as if all was well
 mkdir -p "$tmp/emptybox"

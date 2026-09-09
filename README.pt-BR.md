@@ -36,15 +36,14 @@ numa `dlc/` dentro dela — ou o instalador solto, quando o jogo não tem DLC:
 
 ```
 install/
-├── setup_outro_jogo_1.2.3.exe                   <- solto: um jogo sem DLC
-├── setup_outro_jogo_1.2.3-1.bin
-└── being/                                       <- pasta: o jogo e o que vem com ele
-    ├── setup_being_a_dik_-_season_1_(58051).exe
-    ├── setup_being_a_dik_-_season_1_(58051)-1.bin
-    ├── setup_being_a_dik_-_season_1_(58051)-2.bin
+├── setup_stardew_valley_1.6.15_(70330).exe      <- solto: um jogo sem DLC
+└── grimdawn/                                    <- pasta: o jogo e o que vem com ele
+    ├── setup_grim_dawn_1.2.1.5_(51951).exe
+    ├── setup_grim_dawn_1.2.1.5_(51951)-1.bin
+    ├── setup_grim_dawn_1.2.1.5_(51951)-2.bin
     └── dlc/
-        ├── setup_being_a_dik_-_season_2_(58051).exe
-        └── setup_being_a_dik_..._official_guide_(58051).exe
+        ├── setup_grim_dawn_ashes_of_malmouth_(51951).exe
+        └── setup_grim_dawn_forgotten_gods_(51951).exe
 ```
 
 ```bash
@@ -52,19 +51,19 @@ install/
 ./build.sh
 
 # 2. testar na sua distro
-./"Being a DIK - Season 1.pc"/play.sh
+./"Grim Dawn.pc"/play.sh
 
 # 3. levar pro Batocera
-cp -r "Being a DIK - Season 1.pc" /userdata/roms/windows/
+cp -r "Grim Dawn.pc" /userdata/roms/windows/
 ```
 
 Ele lista o que achou e deixa você escolher:
 
 ```
 install/: 3 jogo(s) encontrado(s)
-   1) being
-   2) outro
-   3) Being a DIK - Season 1                 setup_being_a_dik.exe
+   1) Grim Dawn                              grimdawn
+   2) Stardew Valley                         setup_stardew_valley_1.6.15_(70330).exe
+   3) jogo-antigo
 Instalar quais? [Enter = todos; ex: 1 3, ou 1-2]:
 ```
 
@@ -147,7 +146,7 @@ pra escolher o nome do `.pc`, que no `install/` vem do instalador:
 
 ```bash
 # uma pasta com os instaladores vira o .pc de mesmo nome
-./build.sh being                                    # being/ -> being.pc
+./build.sh grimdawn                                 # grimdawn/ -> grimdawn.pc
 
 # a pasta que a GOG entregou, com o destino que você escolher
 ./build.sh Jogo.pc "/caminho/Jogo_1.2.3_(58051)_win_gog"

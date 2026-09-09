@@ -36,15 +36,14 @@ a `dlc/` inside it — or a loose installer, when the game has no DLC:
 
 ```
 install/
-├── setup_other_game_1.2.3.exe                   <- loose: a game with no DLC
-├── setup_other_game_1.2.3-1.bin
-└── being/                                       <- a folder: the game and what comes with it
-    ├── setup_being_a_dik_-_season_1_(58051).exe
-    ├── setup_being_a_dik_-_season_1_(58051)-1.bin
-    ├── setup_being_a_dik_-_season_1_(58051)-2.bin
+├── setup_stardew_valley_1.6.15_(70330).exe      <- loose: a game with no DLC
+└── grimdawn/                                    <- a folder: the game and what comes with it
+    ├── setup_grim_dawn_1.2.1.5_(51951).exe
+    ├── setup_grim_dawn_1.2.1.5_(51951)-1.bin
+    ├── setup_grim_dawn_1.2.1.5_(51951)-2.bin
     └── dlc/
-        ├── setup_being_a_dik_-_season_2_(58051).exe
-        └── setup_being_a_dik_..._official_guide_(58051).exe
+        ├── setup_grim_dawn_ashes_of_malmouth_(51951).exe
+        └── setup_grim_dawn_forgotten_gods_(51951).exe
 ```
 
 ```bash
@@ -52,19 +51,19 @@ install/
 ./build.sh
 
 # 2. test it on your distro
-./"Being a DIK - Season 1.pc"/play.sh
+./"Grim Dawn.pc"/play.sh
 
 # 3. take it to Batocera
-cp -r "Being a DIK - Season 1.pc" /userdata/roms/windows/
+cp -r "Grim Dawn.pc" /userdata/roms/windows/
 ```
 
 It lists what it found and lets you choose:
 
 ```
 install/: 3 game(s) found
-   1) being
-   2) outro
-   3) Being a DIK - Season 1                 setup_being_a_dik.exe
+   1) Grim Dawn                              grimdawn
+   2) Stardew Valley                         setup_stardew_valley_1.6.15_(70330).exe
+   3) my-old-game
 Install which? [Enter = all; e.g. 1 3, or 1-2]:
 ```
 
@@ -74,8 +73,8 @@ gets packaged.
 
 **The name comes out of the installer header** — the same one GOG uses, and you
 type none of it. When the name came from there, the right-hand column shows what
-it came from, as in item 3 above; when the header says nothing, the folder's own
-name stands, as in items 1 and 2. The folders land beside `install/`, in the
+it came from, as in items 1 and 2 above; when the header says nothing, the
+folder's own name stands, as in item 3. The folders land beside `install/`, in the
 repo root, because `install/` is an inbox and is meant to be emptied. Anything
 in there that is not an InnoSetup installer is skipped with a note; `.bin` files
 are the parts and stay quiet.
@@ -151,7 +150,7 @@ installer:
 
 ```bash
 # a folder holding the installers becomes the .pc of the same name
-./build.sh being                                    # being/ -> being.pc
+./build.sh grimdawn                                 # grimdawn/ -> grimdawn.pc
 
 # the folder GOG handed you, with whatever destination you pick
 ./build.sh Game.pc "/path/Game_1.2.3_(58051)_win_gog"
