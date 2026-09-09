@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # GOG installer (InnoSetup) -> .pc folder that runs on Batocera and on any distro.
 #
-#   ./build.sh Game.pc setup.exe [dlc.exe ...]   package
+#   ./build.sh Game                              Game/ holds the installers -> Game.pc
+#   ./build.sh Game.pc gog-folder/               package (base + DLCs)
+#   ./build.sh Game.pc setup.exe dlc.exe ...     same, one path at a time
 #   ./build.sh Game.pc                           only reclassify an extracted folder
 set -euo pipefail
 shopt -s dotglob nullglob
@@ -27,11 +29,18 @@ lang_name() {
 # GOG2LINUX_LANG=pt or =en. No gettext, no .po files, no runtime dependency.
 case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
   pt*)
-    M_USAGE="uso: %s [--desktop|--no-desktop] [--lang CODIGO|all] Jogo.pc setup.exe [dlc.exe ...]\n"
+    M_USAGE="uso: %s [--desktop|--no-desktop] [--lang CODIGO|all] ALVO [instaladores ...]\n\
+  Jogo      pasta com os instaladores (e uma dlc/ opcional) -> vira Jogo.pc\n\
+  Jogo.pc   pasta-da-gog (ou setup.exe dlc.exe ...)\n\
+  Jogo.pc   sozinho, so reclassifica uma pasta ja extraida\n"
     M_NO_INNO="falta o innoextract: instale o pacote innoextract (apt/dnf/pacman/zypper)"
     M_NO_PY="falta o python3: instale o pacote python3"
     M_NOT_DEST="o primeiro argumento e a pasta de destino, nao o instalador"
     M_NO_SETUP="instalador nao encontrado: %s\n"
+    M_NO_PARTS="nenhum %s-*.bin ao lado do instalador\n  instalador GOG grande vem em partes: leve os .bin junto com o .exe\n"
+    M_EMPTY_DIR="nenhum instalador .exe nesta pasta: %s\n"
+    M_BRACKETS="tire os colchetes do caminho: %s\n  no uso acima eles so marcam o que e opcional\n"
+    M_FROM_DIR="pasta: %s instaladores em %s\n"
     M_OFFERS="%s oferece %s idiomas:\n"
     M_ASK_LANG="Idioma [%s]: "
     M_LANG="idioma: %s (%s)\n"
@@ -58,13 +67,24 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_ASK_MENU='Adicionar "%s" ao menu de jogos? [s/N] '
     M_YES="sSyY"
     M_ENTRY="entrada de menu: %s\n"
+    M_STAGING="pasta de instaladores: %s -> %s\n"
+    M_ASK_STAGE='Apagar os instaladores em "%s"? [s/N] '
+    M_STAGE_GONE="instaladores apagados: %s\n"
+    M_STAGE_KEPT="instaladores mantidos em: %s (apague quando o jogo abrir)\n"
     ;;
   *)
-    M_USAGE="usage: %s [--desktop|--no-desktop] [--lang CODE|all] Game.pc setup.exe [dlc.exe ...]\n"
+    M_USAGE="usage: %s [--desktop|--no-desktop] [--lang CODE|all] TARGET [installers ...]\n\
+  Game      folder holding the installers (and an optional dlc/) -> becomes Game.pc\n\
+  Game.pc   gog-folder (or setup.exe dlc.exe ...)\n\
+  Game.pc   on its own, only reclassifies an already extracted folder\n"
     M_NO_INNO="innoextract is missing: install the innoextract package (apt/dnf/pacman/zypper)"
     M_NO_PY="python3 is missing: install the python3 package"
     M_NOT_DEST="first argument is the destination folder, not the installer"
     M_NO_SETUP="installer not found: %s\n"
+    M_NO_PARTS="no %s-*.bin next to the installer\n  large GOG installers ship in parts: keep the .bin files with the .exe\n"
+    M_EMPTY_DIR="no .exe installer in this folder: %s\n"
+    M_BRACKETS="drop the brackets from the path: %s\n  in the usage above they only mark what is optional\n"
+    M_FROM_DIR="folder: %s installers in %s\n"
     M_OFFERS="%s offers %s languages:\n"
     M_ASK_LANG="Language [%s]: "
     M_LANG="language: %s (%s)\n"
@@ -91,6 +111,10 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_ASK_MENU='Add "%s" to the desktop games menu? [y/N] '
     M_YES="yY"
     M_ENTRY="menu entry: %s\n"
+    M_STAGING="installer folder: %s -> %s\n"
+    M_ASK_STAGE='Delete the installers in "%s"? [y/N] '
+    M_STAGE_GONE="installers deleted: %s\n"
+    M_STAGE_KEPT="installers kept in: %s (delete them once the game runs)\n"
     ;;
 esac
 
@@ -118,10 +142,45 @@ target=$(readlink -f "$1"); shift
 [ -f "$target" ] && die "$M_NOT_DEST
 $(printf "$M_USAGE" "$0")"
 
+# One folder per game: <name>/ holds the installers, with the DLCs in a dlc/
+# subfolder, and becomes <name>.pc. GOG names every installer setup_*, which is
+# what tells such a folder apart from an extracted game handed over to be
+# reclassified -- that one is full of .exe files too, none of them installers.
+staging=
+if [ $# -eq 0 ] && [ -d "$target" ]; then
+  case "$target" in
+    *.pc) ;;
+    *) pending=("$target"/setup_*.exe "$target"/*/setup_*.exe)
+       if [ ${#pending[@]} -gt 0 ]; then
+         staging=$target
+         target=$target.pc
+         printf "$M_STAGING" "$staging" "$target"
+         set -- "$staging"
+       fi ;;
+  esac
+fi
+
 # check everything before extracting: failing halfway leaves a half-built folder
-for setup in "$@"; do
-  [ -f "$setup" ] || die "$(printf "$M_NO_SETUP" "$setup")"
-done
+if [ $# -gt 0 ]; then
+  setups=()
+  for arg in "$@"; do
+    # copying the usage line verbatim leaves its brackets glued to the path
+    case "$arg" in \[*|*\]) die "$(printf "$M_BRACKETS" "$arg")
+$(printf "$M_USAGE" "$0")" ;; esac
+    # a GOG download is one folder: base .exe at the root, DLCs in a subfolder,
+    # and the .bin parts tag along on their own. Pass the folder, not the list.
+    if [ -d "$arg" ]; then
+      found=("$arg"/*.exe "$arg"/*/*.exe)
+      [ ${#found[@]} -gt 0 ] || die "$(printf "$M_EMPTY_DIR" "$arg")"
+      printf "$M_FROM_DIR" "${#found[@]}" "$arg"
+      setups+=("${found[@]}")
+    else
+      [ -f "$arg" ] || die "$(printf "$M_NO_SETUP" "$arg")"
+      setups+=("$arg")
+    fi
+  done
+  set -- "${setups[@]}"
+fi
 
 mkdir -p "$target"
 if [ $# -gt 0 ]; then
@@ -164,7 +223,15 @@ if [ $# -gt 0 ]; then
         printf "$M_LANG" "$pick" "$(lang_name "$pick")"
       fi
     fi
-    innoextract --gog --silent --collisions=overwrite "${opts[@]}" -d "$target" "$setup"
+    if ! innoextract --gog --silent --collisions=overwrite "${opts[@]}" -d "$target" "$setup"; then
+      # an installer past 4 GB ships as setup.exe + setup-1.bin + setup-2.bin,
+      # and moving only the .exe is the usual way to end up here. Only worth
+      # saying once innoextract has already failed: plenty of installers are a
+      # single file, and a missing slice is not something its header knows.
+      parts=("${setup%.exe}"-*.bin)
+      [ ${#parts[@]} -gt 0 ] || die "$(printf "$M_NO_PARTS" "$(basename "${setup%.exe}")")"
+      exit 1
+    fi
   done
   # installer scaffolding. Only after extracting: in reclassify mode that tmp/
   # may well be a folder belonging to the game itself.
@@ -697,4 +764,19 @@ PYICON
 
   command -v update-desktop-database >/dev/null && update-desktop-database "$apps" 2>/dev/null
   printf "$M_ENTRY" "$entry"
+fi
+
+# the installers did their job and weigh several GB; offer to reclaim the space,
+# but only after everything above went through -- a half-built folder is worth
+# rebuilding, and it cannot be rebuilt from installers that are gone
+if [ -n "$staging" ]; then
+  answer=n
+  if [ -t 0 ]; then
+    printf "$M_ASK_STAGE" "$staging"
+    read -r answer
+  fi
+  case "$answer" in
+    ["$M_YES"]*) rm -rf "$staging"; printf "$M_STAGE_GONE" "$staging" ;;
+    *)           printf "$M_STAGE_KEPT" "$staging" ;;
+  esac
 fi

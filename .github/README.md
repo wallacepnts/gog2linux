@@ -31,15 +31,48 @@ want a Microsoft DLL).
 
 ## The universal rule: any GOG game in 3 steps
 
+**One folder per game.** You make the folder, drop the installers in, and put
+the DLCs in a `dlc/` subfolder. The folder's name is the game's name:
+
+```
+being/
+├── setup_being_a_dik_-_season_1_(58051).exe     <- base
+├── setup_being_a_dik_-_season_1_(58051)-1.bin   <- the parts come along
+├── setup_being_a_dik_-_season_1_(58051)-2.bin
+└── dlc/
+    ├── setup_being_a_dik_-_season_2_(58051).exe
+    └── setup_being_a_dik_..._official_guide_(58051).exe
+```
+
 ```bash
 # 1. package (once, on any Linux PC)
-./build.sh [--desktop] GameName.pc "/path/setup_game_1.2.3.exe" ["dlc1.exe" "dlc2.exe" ...]
+./build.sh being                 # being/ -> being.pc
 
 # 2. test it on your distro
-./GameName.pc/play.sh
+./being.pc/play.sh
 
 # 3. take it to Batocera
-cp -r GameName.pc /userdata/roms/windows/
+cp -r being.pc /userdata/roms/windows/
+```
+
+The `.exe` at the root is the base, the ones in subfolders are the DLCs, and the
+`.bin` parts stay out of it — innoextract pulls them together on its own. Once
+the `.pc` is built, `build.sh` asks whether it may delete `being/`; say yes after
+the game starts and you get the download's gigabytes back. The default is **no**,
+so Enter keeps everything.
+
+You do not have to move anything if you would rather not: the folder GOG handed
+you already has that shape and works as an argument exactly as it came — only
+then the destination is yours to name:
+
+```bash
+./build.sh Game.pc "/path/Game_1.2.3_(58051)_win_gog"
+```
+
+And loose paths still work, in order base → DLCs:
+
+```bash
+./build.sh Game.pc "/path/setup_game.exe" "/path/DLC/setup_dlc.exe"
 ```
 
 `build.sh` extracts the base installer and the DLCs into the same folder (DLCs
@@ -65,7 +98,11 @@ writing `autorun.cmd` and tells you which system to use instead.
    `setup_game.exe` + `setup_game-1.bin` + `setup_game-2.bin`. innoextract's
    `--gog` pulls them together on its own — the `.bin` files only need to sit in
    the same folder.
-3. **A DLC is just one more argument**, in order: base first, DLCs after.
+3. **DLCs come along when you pass the folder**, from `dlc/` (or any
+   subfolder). Passing files one by one, the order matters: base first, DLCs
+   after. And **no brackets** — in the `usage:` line they only mark what is
+   optional; copied along, they become part of the path and `build.sh` stops
+   with `installer not found: [/...`.
 4. **Multi-language installers ask, and default to English.** GOG ships one
    installer with every language inside; extracting all of them lets the last
    one win the metadata, which is how an English game comes out Italian. When
@@ -91,7 +128,8 @@ writing `autorun.cmd` and tells you which system to use instead.
 
    That line matters: a GOG store page may advertise four localizations while
    the installer you downloaded holds one. The others are separate downloads;
-   pass them all on the same command line, like DLCs.
+   drop them all in the same folder, or pass them all on the same command line,
+   like DLCs.
 
    In a script there is no question: `--lang it-IT` picks one, `--lang all`
    keeps every language, and with neither it takes `en-*` silently.

@@ -31,15 +31,46 @@ Extras conforme o caso: `squashfs-tools` (abrir `.wsquashfs`), `winetricks`
 
 ## Regra universal: qualquer jogo GOG em 3 passos
 
+**Uma pasta por jogo.** Você cria a pasta, joga os instaladores dentro e põe as
+DLCs numa subpasta `dlc/`. O nome da pasta é o nome do jogo:
+
+```
+being/
+├── setup_being_a_dik_-_season_1_(58051).exe     <- base
+├── setup_being_a_dik_-_season_1_(58051)-1.bin   <- as partes vêm junto
+├── setup_being_a_dik_-_season_1_(58051)-2.bin
+└── dlc/
+    ├── setup_being_a_dik_-_season_2_(58051).exe
+    └── setup_being_a_dik_..._official_guide_(58051).exe
+```
+
 ```bash
 # 1. empacotar (uma vez, em qualquer PC Linux)
-./build.sh [--desktop] NomeDoJogo.pc "/caminho/setup_jogo_1.2.3.exe" ["dlc1.exe" "dlc2.exe" ...]
+./build.sh being                 # being/ -> being.pc
 
 # 2. testar na sua distro
-./NomeDoJogo.pc/play.sh
+./being.pc/play.sh
 
 # 3. levar pro Batocera
-cp -r NomeDoJogo.pc /userdata/roms/windows/
+cp -r being.pc /userdata/roms/windows/
+```
+
+O `.exe` da raiz é a base, os das subpastas são as DLCs, e os `.bin` ficam de
+fora — o innoextract junta as partes sozinho. Com o `.pc` pronto, o `build.sh`
+pergunta se pode apagar `being/`; diga sim depois que o jogo abrir, e você
+recupera os gigas do download. O padrão é **não**, então Enter guarda tudo.
+
+Não precisa mexer em nada se não quiser: a pasta que a GOG entregou já tem esse
+formato e vale como argumento do jeito que veio — só que aí o destino é seu:
+
+```bash
+./build.sh Jogo.pc "/caminho/Jogo_1.2.3_(58051)_win_gog"
+```
+
+E os caminhos avulsos continuam valendo, na ordem base → DLCs:
+
+```bash
+./build.sh Jogo.pc "/caminho/setup_jogo.exe" "/caminho/DLC/setup_dlc.exe"
 ```
 
 O `build.sh` extrai o instalador base e as DLCs na mesma pasta (as DLCs
@@ -64,7 +95,11 @@ antes de gerar o `autorun.cmd` e diz qual sistema usar.
 2. **Passe o `.exe`, nunca os `.bin`.** Instalador GOG grande vem como
    `setup_jogo.exe` + `setup_jogo-1.bin` + `setup_jogo-2.bin`. O `--gog` do
    innoextract junta tudo sozinho — os `.bin` só precisam estar na mesma pasta.
-3. **DLC é só mais um argumento**, na ordem: base primeiro, DLCs depois.
+3. **DLC vem junto quando você passa a pasta**, em `dlc/` (ou qualquer
+   subpasta). Passando arquivo por arquivo, a ordem importa: base primeiro,
+   DLCs depois. E **sem colchetes** — na linha `uso:` eles só marcam o que é
+   opcional; copiados junto, viram parte do caminho e o `build.sh` para com
+   `instalador nao encontrado: [/...`.
 4. **Instalador multi-idioma pergunta, e assume inglês.** A GOG entrega um
    instalador só, com todos os idiomas dentro; extrair tudo faz o último vencer
    os metadados — é assim que um jogo em inglês termina em italiano. Quando o
@@ -90,7 +125,8 @@ antes de gerar o `autorun.cmd` e diz qual sistema usar.
 
    Essa linha importa: a página da GOG pode anunciar quatro localizações
    enquanto o instalador que você baixou tem uma. As outras são downloads
-   separados; passe todos na mesma linha de comando, como se fossem DLCs.
+   separados; jogue todos na mesma pasta, ou passe todos na mesma linha de
+   comando, como se fossem DLCs.
 
    Em script não há pergunta: `--lang it-IT` escolhe um, `--lang all` guarda
    todos, e sem nenhum dos dois ele pega `en-*` calado.

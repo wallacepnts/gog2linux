@@ -5,3 +5,8 @@
 
 # local wine prefix
 .prefix/
+
+# installer staging: <game>/ in the repo root becomes <game>.pc, and GOG's
+# multi-GB setup files must never end up in a commit
+setup_*.exe
+*.bin

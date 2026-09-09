@@ -21,6 +21,27 @@ has() { case "$2" in *"$3"*) ;; *) echo "FAILED $1:"; echo "  output:   $2"; ech
 touch "$tmp/setup.exe"
 ! "$here/build.sh" "$tmp/setup.exe" >/dev/null 2>&1 || { echo "FAILED: accepted a file as destination"; exit 1; }
 
+# a folder stands in for the whole GOG download: base .exe at the root, DLCs in
+# a subfolder, .bin parts ignored (innoextract picks them up on its own)
+mkdir -p "$tmp/gog/DLC"
+touch "$tmp/gog/base.exe" "$tmp/gog/base-1.bin" "$tmp/gog/DLC/d1.exe"
+has folder "$("$here/build.sh" "$tmp/folder.pc" "$tmp/gog" 2>&1 || true)" "2 installers in"
+mkdir -p "$tmp/none"
+! "$here/build.sh" "$tmp/none.pc" "$tmp/none" >/dev/null 2>&1 || { echo "FAILED: accepted a folder with no installer"; exit 1; }
+
+# the usage line's brackets, pasted along with the path, are not a filename
+! "$here/build.sh" "$tmp/br.pc" "[$tmp/gog/base.exe" >/dev/null 2>&1 || { echo "FAILED: accepted a bracketed path"; exit 1; }
+
+# one folder per game: <name>/ holding setup_*.exe (and dlc/) becomes <name>.pc
+mkdir -p "$tmp/being/dlc"; touch "$tmp/being/setup_g.exe" "$tmp/being/dlc/setup_d.exe"
+has staging "$("$here/build.sh" "$tmp/being" 2>&1 || true)" "$tmp/being -> $tmp/being.pc"
+
+# an extracted folder without the .pc suffix is still only reclassified: its own
+# .exe files are the game, not installers waiting to be run
+mkdir -p "$tmp/plain"; touch "$tmp/plain/game.exe"
+has plain "$("$here/build.sh" "$tmp/plain")" "CMD=game.exe"
+[ ! -d "$tmp/plain.pc" ] || { echo "FAILED: took an extracted folder for installers"; exit 1; }
+
 # DOSBox game in disguise: warns and writes no autorun.cmd
 mkdir -p "$tmp/dos.pc/DOSBOX"
 has dos "$("$here/build.sh" "$tmp/dos.pc")" "dos game in disguise"
