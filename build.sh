@@ -83,6 +83,8 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_ASK_STAGE='Apagar os instaladores em "%s"? [s/N] '
     M_STAGE_GONE="instaladores apagados: %s\n"
     M_STAGE_KEPT="instaladores mantidos em: %s (apague quando o jogo abrir)\n"
+    M_GAMES="Jogos"
+    M_GAMES_DIR="instalando em: %s\n"
     M_INBOX="install/: %s jogo(s) encontrado(s)\n"
     M_ASK_PICK="Instalar quais? [Enter = todos; ex: 1 3, ou 1-2]: "
     M_ALL="todos"
@@ -139,6 +141,8 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_ASK_STAGE='Delete the installers in "%s"? [y/N] '
     M_STAGE_GONE="installers deleted: %s\n"
     M_STAGE_KEPT="installers kept in: %s (delete them once the game runs)\n"
+    M_GAMES="Games"
+    M_GAMES_DIR="installing into: %s\n"
     M_INBOX="install/: %s game(s) found\n"
     M_ASK_PICK="Install which? [Enter = all; e.g. 1 3, or 1-2]: "
     M_ALL="all"
@@ -195,10 +199,14 @@ if [ $# -eq 0 ] && [ -d "$inbox" ]; then
     fi
   done
   [ ${#games[@]} -gt 0 ] || die "$(printf "$M_INBOX_EMPTY" "$inbox")"
-  # the games land beside the inbox, not inside it: the inbox gets emptied
-  root=$(dirname "$inbox")
+  # the games go to the home games folder, named in the language of the system.
+  # Not beside the inbox: that one gets emptied, and on a fresh checkout it sits
+  # in the repo, which is no place for twenty gigabytes of game.
+  root=${GOG2LINUX_GAMES:-$HOME/$M_GAMES}
+  mkdir -p "$root"
 
   printf "$M_INBOX" "${#games[@]}"
+  printf "$M_GAMES_DIR" "$root"
   for i in "${!games[@]}"; do
     item=$(basename "${games[$i]}")
     # the source is worth showing only when the header renamed the game

@@ -46,12 +46,19 @@ has plain "$("$here/build.sh" "$tmp/plain")" "CMD=game.exe"
 # InnoSetup header is a game, and anything else is left alone
 mkdir -p "$tmp/inbox/grimdawn/dlc"
 touch "$tmp/inbox/grimdawn/setup_g.exe" "$tmp/inbox/grimdawn/dlc/setup_d.exe" "$tmp/inbox/junk.exe"
-inbox=$(GOG2LINUX_INBOX="$tmp/inbox" "$here/build.sh" 2>&1 || true)
+inbox=$(GOG2LINUX_INBOX="$tmp/inbox" GOG2LINUX_GAMES="$tmp/games" "$here/build.sh" 2>&1 || true)
 has inbox "$inbox" "1 game(s) found"
 has inbox-skip "$inbox" "not an InnoSetup installer: junk.exe"
 has inbox-name "$inbox" "grimdawn -> grimdawn.pc"
-# the game lands beside the inbox, never inside it -- the inbox gets emptied
+# the game lands in the games folder, never inside the inbox -- that gets emptied
 [ ! -e "$tmp/inbox/grimdawn.pc" ] || { echo "FAILED: built inside the inbox"; exit 1; }
+[ -d "$tmp/games/grimdawn.pc" ] || { echo "FAILED: not built in the games folder"; exit 1; }
+
+# and with nothing overriding it, the folder is named in the system's language
+has games-pt "$(HOME="$tmp/home" GOG2LINUX_LANG=pt GOG2LINUX_INBOX="$tmp/inbox" \
+                "$here/build.sh" 2>&1 || true)" "$tmp/home/Jogos"
+has games-en "$(HOME="$tmp/home" GOG2LINUX_INBOX="$tmp/inbox" \
+                "$here/build.sh" 2>&1 || true)" "$tmp/home/Games"
 # a failed game keeps every installer: they are all that can rebuild it
 has inbox-fail "$inbox" "1 game(s) failed"
 [ -e "$tmp/inbox/grimdawn/setup_g.exe" ] || { echo "FAILED: deleted installers after a failure"; exit 1; }

@@ -51,16 +51,17 @@ install/
 ./build.sh
 
 # 2. test it on your distro
-./"Grim Dawn.pc"/play.sh
+~/Games/"Grim Dawn.pc"/play.sh
 
 # 3. take it to Batocera
-cp -r "Grim Dawn.pc" /userdata/roms/windows/
+cp -r ~/Games/"Grim Dawn.pc" /userdata/roms/windows/
 ```
 
 It lists what it found and lets you choose:
 
 ```
 install/: 3 game(s) found
+installing into: /home/you/Games
    1) Grim Dawn                              grimdawn
    2) Stardew Valley                         setup_stardew_valley_1.6.15_(70330).exe
    3) my-old-game
@@ -74,8 +75,11 @@ gets packaged.
 **The name comes out of the installer header** — the same one GOG uses, and you
 type none of it. When the name came from there, the right-hand column shows what
 it came from, as in items 1 and 2 above; when the header says nothing, the
-folder's own name stands, as in item 3. The folders land beside `install/`, in the
-repo root, because `install/` is an inbox and is meant to be emptied. Anything
+folder's own name stands, as in item 3. The games are installed into `~/Games`,
+or `~/Jogos` on a Portuguese system — the same `$LANG` that picks the language of
+these messages picks the folder. Not beside `install/`: that one is an inbox and
+gets emptied, and on a fresh checkout it sits in the repo, which is no place for
+twenty gigabytes of game. Anything
 in there that is not an InnoSetup installer is skipped with a note; `.bin` files
 are the parts and stay quiet.
 
@@ -180,13 +184,14 @@ spaces, and unquoted, bash complains with `syntax error near unexpected token
 doubt, type the beginning and hit **Tab**; bash escapes it for you. None of this
 comes up in `install/`, where you type no paths at all.
 
-The inbox does not have to live in the repo either:
+Neither end has to stay where it is:
 
 ```bash
-GOG2LINUX_INBOX=/mnt/hd/downloads ./build.sh
+GOG2LINUX_INBOX=/mnt/hd/downloads ./build.sh    # where to read from
+GOG2LINUX_GAMES=/mnt/hd/games ./build.sh        # where to install
 ```
 
-The `.pc` folders always land beside it — in that case, in `/mnt/hd/`.
+Worth knowing when home is a small partition: one GOG game passes 20 GB easily.
 
 ---
 

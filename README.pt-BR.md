@@ -51,16 +51,17 @@ install/
 ./build.sh
 
 # 2. testar na sua distro
-./"Grim Dawn.pc"/play.sh
+~/Jogos/"Grim Dawn.pc"/play.sh
 
 # 3. levar pro Batocera
-cp -r "Grim Dawn.pc" /userdata/roms/windows/
+cp -r ~/Jogos/"Grim Dawn.pc" /userdata/roms/windows/
 ```
 
 Ele lista o que achou e deixa você escolher:
 
 ```
 install/: 3 jogo(s) encontrado(s)
+instalando em: /home/voce/Jogos
    1) Grim Dawn                              grimdawn
    2) Stardew Valley                         setup_stardew_valley_1.6.15_(70330).exe
    3) jogo-antigo
@@ -72,11 +73,13 @@ Em script, sem terminal, não há pergunta: empacota a caixa inteira.
 
 **O nome sai do cabeçalho do instalador** — é o mesmo que a GOG usa, e você não
 digita nada. Quando o nome vem de lá, a coluna da direita mostra de onde saiu,
-como no item 3 acima; quando o cabeçalho não diz nada, fica valendo o nome da
-pasta, como nos itens 1 e 2. Os `.pc` nascem ao lado do `install/`, na raiz do
-repo, porque o `install/` é caixa de entrada e vai ser esvaziado. O que não for
-instalador InnoSetup é ignorado com aviso; os `.bin` são as partes e ficam
-quietos.
+como nos itens 1 e 2 acima; quando o cabeçalho não diz nada, fica valendo o nome
+da pasta, como no item 3. Os jogos são instalados em `~/Jogos`, ou `~/Games` num
+sistema em inglês — o mesmo `$LANG` que escolhe o idioma destas mensagens escolhe
+a pasta. Não ao lado do `install/`: aquilo é caixa de entrada e vai ser
+esvaziado, e num clone novo fica dentro do repo, que não é lugar pra vinte
+gigabytes de jogo. O que não for instalador InnoSetup é ignorado com aviso; os
+`.bin` são as partes e ficam quietos.
 
 Um jogo por vez, cada um no seu processo: instalador ruim custa o próprio jogo,
 não a leva inteira. No fim, se todos deram certo, ele pergunta se pode apagar os
@@ -176,13 +179,14 @@ espaço, e sem aspas o bash reclama de
 digite o começo e complete com **Tab**, que o bash escapa sozinho. Nada disso
 aparece no `install/`, onde você não digita caminho nenhum.
 
-A caixa de entrada também não precisa morar no repo:
+Nenhuma das duas pontas precisa ficar onde está:
 
 ```bash
-GOG2LINUX_INBOX=/mnt/hd/downloads ./build.sh
+GOG2LINUX_INBOX=/mnt/hd/downloads ./build.sh    # de onde ler
+GOG2LINUX_GAMES=/mnt/hd/jogos ./build.sh        # onde instalar
 ```
 
-Os `.pc` sempre nascem ao lado dela — nesse caso, em `/mnt/hd/`.
+Vale saber quando a home é uma partição pequena: jogo GOG passa dos 20 GB fácil.
 
 ---
 
