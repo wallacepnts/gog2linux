@@ -179,7 +179,7 @@ XDG_DATA_HOME="$tmp/xdg" "$here/build.sh" --desktop "$tmp/menu.pc" >/dev/null
 entry="$tmp/xdg/applications/gog-menu.desktop"
 [ -f "$entry" ] || { echo "FAILED: no .desktop written"; exit 1; }
 has desktop-name "$(cat "$entry")" "Name=My Game"
-has desktop-exec "$(cat "$entry")" "Exec=$tmp/menu.pc/play.sh"
+has desktop-exec "$(cat "$entry")" "Exec=\"$tmp/menu.pc/play.sh\""
 has desktop-icon "$(cat "$entry")" "Icon=$tmp/menu.pc/icon.png"
 [ "$(cat "$tmp/menu.pc/icon.png")" = "$(printf '\x89PNGbig')" ] || { echo "FAILED: took the small icon"; exit 1; }
 has desktop-cat  "$(cat "$entry")" "Categories=Game;"
@@ -281,7 +281,16 @@ case "$("$here/build.sh" "$tmp/plain.pc")" in *"reimplemented engine"*) echo "FA
 mkdir -p "$tmp/port.pc"; touch "$tmp/port.pc/Game.exe"
 printf '#!/bin/sh\necho port\n' > "$tmp/port.pc/launch.sh"; chmod +x "$tmp/port.pc/launch.sh"
 XDG_DATA_HOME="$tmp/xdg" "$here/build.sh" --desktop "$tmp/port.pc" >/dev/null
-has port-exec "$(cat "$tmp/xdg/applications/gog-port.desktop")" "Exec=$tmp/port.pc/launch.sh"
+has port-exec "$(cat "$tmp/xdg/applications/gog-port.desktop")" "Exec=\"$tmp/port.pc/launch.sh\""
+
+# a game whose name carries a space: Exec is split on whitespace, so without the
+# quotes the menu entry starts nothing at all
+mkdir -p "$tmp/Two Words.pc"; touch "$tmp/Two Words.pc/game.exe"
+XDG_DATA_HOME="$tmp/xdg" "$here/build.sh" --desktop "$tmp/Two Words.pc" >/dev/null
+has space-exec "$(cat "$tmp/xdg/applications/gog-Two Words.desktop")" \
+               "Exec=\"$tmp/Two Words.pc/play.sh\""
+has space-path "$(cat "$tmp/xdg/applications/gog-Two Words.desktop")" \
+               "Path=$tmp/Two Words.pc"
 
 # GOG's ddraw wrapper ships windowed; packaging flips it to fullscreen
 mkdir -p "$tmp/dx.pc"; touch "$tmp/dx.pc/Game.exe"

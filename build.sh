@@ -933,11 +933,13 @@ PYICON
     echo "Type=Application"
     echo "Name=$name"
     # a source port beats wine; drop a launch.sh in the folder and it wins
-    if [ -x "$target/launch.sh" ]; then
-      echo "Exec=$target/launch.sh"
-    else
-      echo "Exec=$target/play.sh"
-    fi
+    launcher=$target/play.sh
+    [ -x "$target/launch.sh" ] && launcher=$target/launch.sh
+    # Exec is split on whitespace, so "Gravity Circuit.pc" would arrive as two
+    # arguments and start nothing. Quoting is the fix, and inside the quotes the
+    # spec wants a backslash before \ " ` and $. Path and Icon are plain
+    # strings, taken literally, and must NOT be quoted the same way.
+    echo "Exec=\"$(printf '%s' "$launcher" | sed 's/[\\"`$]/\\&/g')\""
     echo "Path=$target"
     [ -n "$icon" ] && echo "Icon=$icon"
     echo "Categories=Game;"
