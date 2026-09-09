@@ -161,6 +161,22 @@ rm -rf "$tmp/reg.pc/.prefix"
 esc=$(printf '%s' "$tmp/reg.pc" | sed 's|/|\\\\|g')
 has reg-path "$(WINE="$tmp/dumpwine" "$tmp/reg.pc/play.sh" 2>/dev/null)" "\"InstallPath\"=\"Z:$esc\""
 
+# a Unity game with .mp4 cutscenes asks for DXVK: wine's own dxgi stubs the call
+# that hands the decoded frame over, and the video plays black
+mkdir -p "$tmp/unity.pc/Game_Data/StreamingAssets"
+touch "$tmp/unity.pc/Game.exe" "$tmp/unity.pc/UnityPlayer.dll"
+touch "$tmp/unity.pc/Game_Data/StreamingAssets/intro.mp4"
+has unity "$("$here/build.sh" "$tmp/unity.pc")" "asking for DXVK"
+has unity-env "$(cat "$tmp/unity.pc/autorun.cmd")" 'ENV=WINEDLLOVERRIDES="d3d11,dxgi=n,b"'
+
+# a .webm cutscene is VP8, which Unity decodes on its own: nothing to override
+mkdir -p "$tmp/webm.pc/Game_Data/StreamingAssets"
+touch "$tmp/webm.pc/Game.exe" "$tmp/webm.pc/UnityPlayer.dll"
+touch "$tmp/webm.pc/Game_Data/StreamingAssets/intro.webm"
+"$here/build.sh" "$tmp/webm.pc" >/dev/null
+[ -z "$(grep -c 'dxgi' "$tmp/webm.pc/autorun.cmd" | grep -v '^0$')" ] ||
+  { echo "FAILED: asked for DXVK with no .mp4 in sight"; exit 1; }
+
 # --desktop writes a freedesktop entry, with the GOG icon when there is one
 # the wrapper scan must not clobber the game name used by the menu entry
 mkdir -p "$tmp/menu.pc"; touch "$tmp/menu.pc/Game.exe" "$tmp/menu.pc/ddraw.dll"

@@ -261,7 +261,30 @@ does not carry.
 | opens and closes immediately | 32-bit running as 64 | `WINEARCH=win32 ./Game.pc/play.sh` (delete `.prefix` first) |
 | a Microsoft `.dll` is missing | game expects an installed runtime | `WINEPREFIX=$PWD/Game.pc/.prefix winetricks vcrun2019` (or whatever it wants) |
 | black screen / freezing on Batocera | no DXVK | turn on `windows.dxvk` in the game's advanced options — **only applies before the first boot**, otherwise delete the prefix in `/userdata/saves/windows/` |
+| cutscene plays black, sound and timing fine | Unity hands the decoded frame over through `dxgi`, which wine leaves stubbed | DXVK in the prefix (just below) |
 | the game demands a real install (registry, DirectX) | it isn't portable | install it into a prefix with wine and package that as `.wtgz` (see below) |
+
+The black cutscene is one `build.sh` spots on its own: a Unity game
+(`UnityPlayer.dll`) with an `.mp4` cutscene gets
+`ENV=WINEDLLOVERRIDES="d3d11,dxgi=n,b"` in its `autorun.cmd`, which is what makes
+wine reach for DXVK. Putting DXVK in the prefix is still yours to do:
+
+```bash
+sudo zypper in dxvk          # or your distro's package
+cd ~/Games/"My Game.pc"
+WINEPREFIX=$PWD/.prefix /usr/libexec/dxvk/bin/setup_dxvk.sh install --symlink
+```
+
+Check what the script did. Here it put the **32-bit** DLLs into the `system32` of
+a 64-bit prefix, and when that happens wine falls back to its own without a word
+— the cutscene stays black and nothing in the log admits it:
+
+```bash
+file -L .prefix/drive_c/windows/system32/d3d11.dll   # has to say x86-64
+```
+
+If it says `i386`, redo the links against `lib64`. A `.webm` cutscene is VP8,
+which Unity decodes by itself: none of this applies.
 
 ---
 

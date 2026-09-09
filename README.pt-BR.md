@@ -254,7 +254,30 @@ mesmo (o sistema `windows` não roda binário Linux).
 | abre e fecha na hora | 32-bit rodando como 64 | `WINEARCH=win32 ./Jogo.pc/play.sh` (apague o `.prefix` antes) |
 | falta `.dll` da Microsoft | jogo espera runtime instalado | `WINEPREFIX=$PWD/Jogo.pc/.prefix winetricks vcrun2019` (ou o que faltar) |
 | tela preta / travando no Batocera | falta DXVK | ligue `windows.dxvk` nas opções avançadas do jogo — **só vale antes do 1º boot**, senão apague o prefixo em `/userdata/saves/windows/` |
+| animação em tela preta, som e tempo certos | Unity entrega o quadro decodificado pelo `dxgi`, que o wine deixa como stub | DXVK no prefixo (logo abaixo) |
 | jogo pede instalação de verdade (registro, DirectX) | não é portátil | instale num prefixo com wine e empacote como `.wtgz` (veja abaixo) |
+
+O caso da animação preta o `build.sh` reconhece sozinho: jogo Unity
+(`UnityPlayer.dll`) com animação em `.mp4` ganha
+`ENV=WINEDLLOVERRIDES="d3d11,dxgi=n,b"` no `autorun.cmd`, que é o que faz o wine
+preferir o DXVK. Pôr o DXVK no prefixo continua sendo com você:
+
+```bash
+sudo zypper in dxvk          # ou o pacote da sua distro
+cd ~/Jogos/"Meu Jogo.pc"
+WINEPREFIX=$PWD/.prefix /usr/libexec/dxvk/bin/setup_dxvk.sh install --symlink
+```
+
+Confira o que o script fez. Aqui ele pôs as DLLs de **32 bits** no `system32` de
+um prefixo de 64 bits, e nesse caso o wine volta pro builtin sem dizer nada — a
+animação continua preta e nada no log acusa:
+
+```bash
+file -L .prefix/drive_c/windows/system32/d3d11.dll   # tem que dizer x86-64
+```
+
+Se disser `i386`, refaça os links apontando pro `lib64`. Animação em `.webm` é
+VP8, que o Unity decodifica sozinho: nada disso se aplica.
 
 ---
 
