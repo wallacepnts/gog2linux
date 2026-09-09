@@ -40,7 +40,7 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
   pt*)
     M_USAGE="uso: %s [--desktop|--no-desktop] [--lang CODIGO|all] [ALVO [instaladores ...]]\n\
   (sem nada)  empacota tudo que estiver em install/\n\
-  Jogo        pasta com os instaladores (e uma dlc/ opcional) -> vira Jogo.pc\n\
+  Jogo        pasta com os instaladores (DLCs numa subpasta) -> vira Jogo.pc\n\
   Jogo.pc     pasta-da-gog (ou setup.exe dlc.exe ...)\n\
   Jogo.pc     sozinho, so reclassifica uma pasta ja extraida\n"
     M_NO_INNO="falta o innoextract: instale o pacote innoextract (apt/dnf/pacman/zypper)"
@@ -95,13 +95,13 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_ASK_DONE='Apagar os instaladores dos %s jogo(s) empacotados? [s/N] '
     M_INBOX_GAME="\n== %s -> %s ==\n"
     M_INBOX_SKIP="ignorado, nao e instalador InnoSetup: %s\n"
-    M_INBOX_EMPTY="nada em %s\n  ponha um setup_*.exe solto, ou uma pasta por jogo com as DLCs numa dlc/\n"
+    M_INBOX_EMPTY="nada em %s\n  ponha um setup_*.exe solto, ou uma pasta por jogo com as DLCs numa subpasta\n"
     M_INBOX_FAIL="%s jogo(s) falharam - nada foi apagado\n"
     ;;
   *)
     M_USAGE="usage: %s [--desktop|--no-desktop] [--lang CODE|all] [TARGET [installers ...]]\n\
   (nothing)   packages everything sitting in install/\n\
-  Game        folder holding the installers (and an optional dlc/) -> becomes Game.pc\n\
+  Game        folder holding the installers (DLCs in a subfolder) -> becomes Game.pc\n\
   Game.pc     gog-folder (or setup.exe dlc.exe ...)\n\
   Game.pc     on its own, only reclassifies an already extracted folder\n"
     M_NO_INNO="innoextract is missing: install the innoextract package (apt/dnf/pacman/zypper)"
@@ -156,7 +156,7 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_ASK_DONE='Delete the installers of the %s game(s) packaged? [y/N] '
     M_INBOX_GAME="\n== %s -> %s ==\n"
     M_INBOX_SKIP="skipped, not an InnoSetup installer: %s\n"
-    M_INBOX_EMPTY="nothing in %s\n  drop a loose setup_*.exe in, or one folder per game with its DLCs in dlc/\n"
+    M_INBOX_EMPTY="nothing in %s\n  drop a loose setup_*.exe in, or one folder per game with its DLCs in a subfolder\n"
     M_INBOX_FAIL="%s game(s) failed - nothing was deleted\n"
     ;;
 esac

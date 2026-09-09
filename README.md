@@ -47,7 +47,8 @@ install/
 ```
 
 Drop the `.bin` files next to the `.exe` and forget them: innoextract pulls the
-parts together on its own.
+parts together on its own. The DLC subfolder's name does not matter — `dlc/`,
+`DLC/` as GOG ships it, or anything else: whatever sits in a subfolder is a DLC.
 
 ```bash
 # 1. package everything sitting in install/

@@ -29,6 +29,12 @@ has folder "$("$here/build.sh" "$tmp/folder.pc" "$tmp/gog" 2>&1 || true)" "2 ins
 mkdir -p "$tmp/none"
 ! "$here/build.sh" "$tmp/none.pc" "$tmp/none" >/dev/null 2>&1 || { echo "FAILED: accepted a folder with no installer"; exit 1; }
 
+# the DLC subfolder's name is not part of the contract: GOG ships DLC/, the
+# README writes dlc/, and any other subfolder works exactly the same
+mkdir -p "$tmp/anycase/DLC"
+touch "$tmp/anycase/setup_base.exe" "$tmp/anycase/DLC/setup_x.exe"
+has dlc-case "$("$here/build.sh" "$tmp/anycase" 2>&1 || true)" "2 installers in"
+
 # the usage line's brackets, pasted along with the path, are not a filename
 ! "$here/build.sh" "$tmp/br.pc" "[$tmp/gog/base.exe" >/dev/null 2>&1 || { echo "FAILED: accepted a bracketed path"; exit 1; }
 

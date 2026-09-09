@@ -47,7 +47,8 @@ install/
 ```
 
 Largue os `.bin` junto do `.exe` e esqueça deles: o innoextract junta as partes
-sozinho.
+sozinho. O nome da subpasta das DLCs não importa — `dlc/`, `DLC/` como a GOG
+entrega, ou qualquer outro: o que estiver numa subpasta entra como DLC.
 
 ```bash
 # 1. empacotar tudo que estiver em install/
