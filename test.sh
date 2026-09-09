@@ -331,6 +331,45 @@ has desktop-wrap "$(WINE_DESKTOP=1024x768 run "$tmp/n.pc/play.sh" "$tmp/n.pc" "g
 eq override "$(run "$tmp/n.pc/play.sh" "$tmp/n.pc" "Other Game.exe" --windowed)" \
             "$tmp/n.pc|$tmp/n.pc/.prefix||Other Game.exe --windowed"
 
+# a LOVE game: love.dll beside an .exe that is really a zip carrying conf.lua.
+# build.sh writes the launcher, so play.sh runs the engine instead of wine.
+# Never run it here: that would want a real LOVE, and a window with it.
+mkdir -p "$tmp/love.pc"; touch "$tmp/love.pc/love.dll"
+printf 'MZ fake PE header' > "$tmp/love.pc/Game.exe"
+python3 -c "import zipfile
+z = zipfile.ZipFile('$tmp/love.pc/Game.exe', 'a')
+z.writestr('conf.lua', 'function love.conf(t) t.window = false end')
+z.close()"
+has love "$("$here/build.sh" "$tmp/love.pc")" "LOVE game (Game.exe)"
+[ -x "$tmp/love.pc/launch.sh" ] || { echo "FAILED: no launch.sh for a LOVE game"; exit 1; }
+has love-target "$(cat "$tmp/love.pc/launch.sh")" 'game="$here/Game.exe"'
+
+# a hand-written launcher is the user's, not ours to overwrite
+printf '#!/bin/sh\necho mine\n' > "$tmp/love.pc/launch.sh"; chmod +x "$tmp/love.pc/launch.sh"
+"$here/build.sh" "$tmp/love.pc" >/dev/null
+eq love-keep "$("$tmp/love.pc/launch.sh")" "mine"
+
+# an .exe that is not a LOVE archive gets no launcher that would only fail later
+mkdir -p "$tmp/notlove.pc"; touch "$tmp/notlove.pc/love.dll" "$tmp/notlove.pc/Game.exe"
+"$here/build.sh" "$tmp/notlove.pc" >/dev/null
+[ ! -e "$tmp/notlove.pc/launch.sh" ] || { echo "FAILED: launcher for a non-LOVE exe"; exit 1; }
+
+# and nothing without love.dll gets a launcher it never asked for
+[ ! -e "$tmp/mix.pc/launch.sh" ] || { echo "FAILED: wrote launch.sh with no love.dll"; exit 1; }
+
+# launch.sh is this project's own marker for a native engine, so it needs no
+# lib/*linux* beside it -- and it gets the execute bit fixed like the rest
+mkdir -p "$tmp/lp.pc"; cp "$here/play.sh" "$tmp/lp.pc/"
+printf 'CMD=game.exe\n' > "$tmp/lp.pc/autorun.cmd"
+printf '#!/bin/sh\necho launch-ok\n' > "$tmp/lp.pc/launch.sh"
+eq launch "$(run "$tmp/lp.pc/play.sh")" "launch-ok"
+
+# FORCE_WINE=1 and an explicit executable must both still reach wine
+eq launch-forced "$(FORCE_WINE=1 run "$tmp/lp.pc/play.sh")" \
+                 "$tmp/lp.pc|$tmp/lp.pc/.prefix||game.exe"
+eq launch-override "$(run "$tmp/lp.pc/play.sh" "$tmp/lp.pc" "Editor.exe")" \
+                   "$tmp/lp.pc|$tmp/lp.pc/.prefix||Editor.exe"
+
 # native .sh without the execute bit: recover instead of dying with rc=126
 mkdir -p "$tmp/nx.pc/lib/py2-linux-x86_64"; cp "$here/play.sh" "$tmp/nx.pc/"
 printf 'CMD=game.exe\n' > "$tmp/nx.pc/autorun.cmd"

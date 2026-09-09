@@ -74,6 +74,8 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_OTHERS="outras entradas no goggame-*.info: %s\n"
     M_OTHERS2="  se o jogo nao abrir, tente uma delas no autorun.cmd"
     M_NATIVE="obs: tem build Linux nativo aqui -> ./%s/%s (sem wine)\n"
+    M_LOVE="obs: jogo LOVE (%s) - launch.sh escrito, o play.sh roda pelo motor nativo\n"
+    M_LOVE_GET="  falta o motor: instale o pacote love, ou flatpak install flathub org.love2d.love2d"
     M_ASK_MENU='Adicionar "%s" ao menu de jogos? [s/N] '
     M_YES="sSyY"
     M_ENTRY="entrada de menu: %s\n"
@@ -128,6 +130,8 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_OTHERS="other entries in goggame-*.info: %s\n"
     M_OTHERS2="  if the game won't start, try one of those in autorun.cmd"
     M_NATIVE="note: native Linux build here -> ./%s/%s (no wine)\n"
+    M_LOVE="note: LOVE game (%s) - launch.sh written, play.sh runs the native engine\n"
+    M_LOVE_GET="  the engine is missing: install the love package, or flatpak install flathub org.love2d.love2d"
     M_ASK_MENU='Add "%s" to the desktop games menu? [y/N] '
     M_YES="yY"
     M_ENTRY="menu entry: %s\n"
@@ -819,6 +823,52 @@ if compgen -G "$target/lib/*linux*" >/dev/null; then
     printf "$M_NATIVE" "$(basename "$target")" "$native"
     break
   done
+fi
+
+# LOVE keeps its runtime in love.dll beside the game, and the .exe is that
+# runtime with the game appended as a zip -- which a native LOVE opens as it is,
+# no renaming and no unpacking. Worth the detour: a LOVE game that brings its
+# own window up (t.window = false in conf.lua) jumps to a null pointer under
+# wine, right where it creates the GL context.
+if [ -f "$target/love.dll" ] && [ ! -e "$target/launch.sh" ]; then
+  # shipped beside the runtime as a .love, or fused into the .exe
+  lovegame=${exe//\"/}
+  for archive in "$target"/*.love; do lovegame=${archive##*/}; break; done
+  # only write a launcher for something that really is a LOVE archive; zipfile
+  # reads past the .exe in front of it, the same way LOVE itself does
+  if python3 - "$target/$lovegame" <<'PYLOVE'
+import sys, zipfile
+try:
+    names = zipfile.ZipFile(sys.argv[1]).namelist()
+except Exception:
+    sys.exit(1)
+sys.exit(0 if {'conf.lua', 'main.lua'} & set(names) else 1)
+PYLOVE
+  then
+    {
+      echo '#!/bin/sh'
+      printf '# %s, through the LOVE engine instead of wine. Written by build.sh:\n' "$name"
+      echo '# play.sh prefers this file over wine. Delete it to go back to wine, or'
+      echo '# set FORCE_WINE=1 for a single run.'
+      echo 'set -eu'
+      echo 'here=$(dirname "$(readlink -f "$0")")'
+      printf 'game="$here/%s"\n' "$lovegame"
+      echo ''
+      echo '# a distro package if there is one, the flatpak otherwise'
+      echo 'if command -v love >/dev/null 2>&1; then'
+      echo '  exec love "$game" "$@"'
+      echo 'fi'
+      echo 'command -v flatpak >/dev/null 2>&1 || {'
+      echo '  echo "install love, or: flatpak install flathub org.love2d.love2d" >&2'
+      echo '  exit 1'
+      echo '}'
+      echo '# the sandbox cannot see the game folder unless it is handed over'
+      echo 'exec flatpak run --filesystem="$here" org.love2d.love2d "$game" "$@"'
+    } > "$target/launch.sh"
+    chmod +x "$target/launch.sh"
+    printf "$M_LOVE" "$lovegame"
+    command -v love >/dev/null || command -v flatpak >/dev/null || echo "$M_LOVE_GET"
+  fi
 fi
 
 # A .desktop entry is all KDE, GNOME and XFCE need; no per-desktop code.

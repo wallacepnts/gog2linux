@@ -63,13 +63,29 @@ if [ ! -e "$target/autorun.cmd" ]; then
   done
 fi
 
-# Native Linux build shipped alongside (Ren'Py and friends): better than wine.
-# FORCE_WINE=1 skips this. Both clues are required so an install script doesn't
-# get mistaken for a launcher.
+# A native engine beats wine, and there are two ways to find one. FORCE_WINE=1
+# skips both, and so does asking for a specific executable.
+#
+# The explicit one: launch.sh. This project writes it, for a game whose engine
+# is native but ships no Linux build of its own -- LOVE, DOSBox, a source port.
+# Nothing else is named that, so the name is the whole clue.
+if [ -z "${FORCE_WINE:-}" ] && [ -z "$override" ] && [ -f "$target/launch.sh" ]; then
+  # copying through NTFS/exFAT, or unzipping, loses the execute bit
+  [ -x "$target/launch.sh" ] || chmod +x "$target/launch.sh" 2>/dev/null || true
+  if [ -x "$target/launch.sh" ]; then
+    cd "$target"
+    exec "$target/launch.sh"
+  fi
+  printf "$M_NO_EXEC" "$target/launch.sh" >&2
+fi
+
+# The implicit one: a Linux build shipped alongside (Ren'Py and friends). Both
+# clues are required here so an install script doesn't get mistaken for a
+# launcher.
 if [ -z "${FORCE_WINE:-}" ] && [ -z "$override" ] && compgen -G "$target/lib/*linux*" >/dev/null; then
   for candidate in "$target"/*.sh; do
-    [ "${candidate##*/}" = play.sh ] && continue
-    # copying through NTFS/exFAT, or unzipping, loses the execute bit
+    # launch.sh was already tried above; warning about it twice helps no one
+    case "${candidate##*/}" in play.sh|launch.sh) continue ;; esac
     [ -x "$candidate" ] || chmod +x "$candidate" 2>/dev/null || true
     if [ -x "$candidate" ]; then
       cd "$target"
