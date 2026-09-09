@@ -168,6 +168,7 @@ touch "$tmp/unity.pc/Game.exe" "$tmp/unity.pc/UnityPlayer.dll"
 touch "$tmp/unity.pc/Game_Data/StreamingAssets/intro.mp4"
 has unity "$("$here/build.sh" "$tmp/unity.pc")" "asking for DXVK"
 has unity-env "$(cat "$tmp/unity.pc/autorun.cmd")" 'ENV=WINEDLLOVERRIDES="d3d11,dxgi=n,b"'
+has unity-screen "$(cat "$tmp/unity.pc/autorun.cmd")" 'SCREEN=native'
 
 # a .webm cutscene is VP8, which Unity decodes on its own: nothing to override
 mkdir -p "$tmp/webm.pc/Game_Data/StreamingAssets"
@@ -401,6 +402,18 @@ eq launch-forced "$(FORCE_WINE=1 run "$tmp/lp.pc/play.sh")" \
                  "$tmp/lp.pc|$tmp/lp.pc/.prefix||game.exe"
 eq launch-override "$(run "$tmp/lp.pc/play.sh" "$tmp/lp.pc" "Editor.exe")" \
                    "$tmp/lp.pc|$tmp/lp.pc/.prefix||Editor.exe"
+
+# SCREEN=native: play.sh asks Unity for the screen's own mode, so nothing has to
+# stretch a 16:9 picture onto a 16:10 panel
+mkdir -p "$tmp/sc.pc"; cp "$here/play.sh" "$tmp/sc.pc/"
+printf 'SCREEN=native\nCMD=game.exe\n' > "$tmp/sc.pc/autorun.cmd"
+eq screen "$(GOG2LINUX_SCREEN=1280x720 run "$tmp/sc.pc/play.sh")" \
+          "$tmp/sc.pc|$tmp/sc.pc/.prefix||game.exe -screen-width 1280 -screen-height 720 -screen-fullscreen 1"
+eq screen-off "$(GOG2LINUX_SCREEN=no run "$tmp/sc.pc/play.sh")" \
+              "$tmp/sc.pc|$tmp/sc.pc/.prefix||game.exe"
+# asking for a specific executable is asking for that and nothing else
+eq screen-override "$(GOG2LINUX_SCREEN=1280x720 run "$tmp/sc.pc/play.sh" "$tmp/sc.pc" "Editor.exe")" \
+                   "$tmp/sc.pc|$tmp/sc.pc/.prefix||Editor.exe"
 
 # native .sh without the execute bit: recover instead of dying with rc=126
 mkdir -p "$tmp/nx.pc/lib/py2-linux-x86_64"; cp "$here/play.sh" "$tmp/nx.pc/"

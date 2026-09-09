@@ -264,27 +264,26 @@ does not carry.
 | cutscene plays black, sound and timing fine | Unity hands the decoded frame over through `dxgi`, which wine leaves stubbed | DXVK in the prefix (just below) |
 | the game demands a real install (registry, DirectX) | it isn't portable | install it into a prefix with wine and package that as `.wtgz` (see below) |
 
-The black cutscene is one `build.sh` spots on its own: a Unity game
-(`UnityPlayer.dll`) with an `.mp4` cutscene gets
-`ENV=WINEDLLOVERRIDES="d3d11,dxgi=n,b"` in its `autorun.cmd`, which is what makes
-wine reach for DXVK. Putting DXVK in the prefix is still yours to do:
+This one is automatic. `build.sh` spots a Unity game (`UnityPlayer.dll`) with an
+`.mp4` cutscene and writes `ENV=WINEDLLOVERRIDES="d3d11,dxgi=n,b"` into its
+`autorun.cmd`; `play.sh`, on the first run, wires DXVK into the prefix if it
+finds it installed — it looks in `/usr/libexec/dxvk/lib64`, `/usr/share/dxvk/x64`,
+`/usr/lib/dxvk/x64` and `/opt/dxvk/x64`. All you need is the package:
 
 ```bash
-sudo zypper in dxvk          # or your distro's package
-cd ~/Games/"My Game.pc"
-WINEPREFIX=$PWD/.prefix /usr/libexec/dxvk/bin/setup_dxvk.sh install --symlink
+sudo zypper in dxvk          # or whatever your distro calls it
 ```
 
-Check what the script did. Here it put the **32-bit** DLLs into the `system32` of
-a 64-bit prefix, and when that happens wine falls back to its own without a word
-— the cutscene stays black and nothing in the log admits it:
+It picks the 64-bit directory by name on purpose: the `setup_dxvk.sh` that ships
+with the package hands the **32-bit** DLLs to a 64-bit prefix, and wine then
+falls back to its own without a word — the cutscene stays black and nothing in
+the log admits it. If in doubt, check:
 
 ```bash
 file -L .prefix/drive_c/windows/system32/d3d11.dll   # has to say x86-64
 ```
 
-If it says `i386`, redo the links against `lib64`. A `.webm` cutscene is VP8,
-which Unity decodes by itself: none of this applies.
+A `.webm` cutscene is VP8, which Unity decodes by itself: none of this applies.
 
 ---
 
@@ -297,6 +296,7 @@ CRLF — CRLF is the number one cause of "it doesn't start".
 CMD=game.exe                      # required; quote it if it has spaces
 DIR=64bit/bin                     # optional, relative to the .pc folder
 ENV=WINEDLLOVERRIDES="d3d11=n"    # optional, repeatable
+SCREEN=native                     # optional, only play.sh reads it
 LANG=pt_BR.UTF-8                  # optional
 SAVEDIR=drive_c/users/...         # optional, Batocera v42+
 ```

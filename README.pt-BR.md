@@ -257,27 +257,26 @@ mesmo (o sistema `windows` não roda binário Linux).
 | animação em tela preta, som e tempo certos | Unity entrega o quadro decodificado pelo `dxgi`, que o wine deixa como stub | DXVK no prefixo (logo abaixo) |
 | jogo pede instalação de verdade (registro, DirectX) | não é portátil | instale num prefixo com wine e empacote como `.wtgz` (veja abaixo) |
 
-O caso da animação preta o `build.sh` reconhece sozinho: jogo Unity
-(`UnityPlayer.dll`) com animação em `.mp4` ganha
-`ENV=WINEDLLOVERRIDES="d3d11,dxgi=n,b"` no `autorun.cmd`, que é o que faz o wine
-preferir o DXVK. Pôr o DXVK no prefixo continua sendo com você:
+Esse caso é automático. O `build.sh` reconhece jogo Unity (`UnityPlayer.dll`)
+com animação em `.mp4` e escreve `ENV=WINEDLLOVERRIDES="d3d11,dxgi=n,b"` no
+`autorun.cmd`; o `play.sh`, na primeira execução, liga o DXVK no prefixo se
+achar ele instalado — procura em `/usr/libexec/dxvk/lib64`, `/usr/share/dxvk/x64`,
+`/usr/lib/dxvk/x64` e `/opt/dxvk/x64`. Você só precisa do pacote:
 
 ```bash
-sudo zypper in dxvk          # ou o pacote da sua distro
-cd ~/Jogos/"Meu Jogo.pc"
-WINEPREFIX=$PWD/.prefix /usr/libexec/dxvk/bin/setup_dxvk.sh install --symlink
+sudo zypper in dxvk          # ou o equivalente na sua distro
 ```
 
-Confira o que o script fez. Aqui ele pôs as DLLs de **32 bits** no `system32` de
-um prefixo de 64 bits, e nesse caso o wine volta pro builtin sem dizer nada — a
-animação continua preta e nada no log acusa:
+Ele escolhe o diretório de 64 bits pelo nome de propósito: o `setup_dxvk.sh` que
+vem no pacote entrega as DLLs de **32 bits** para um prefixo de 64, e o wine
+então volta para o builtin sem dizer nada — a animação continua preta e nada no
+log acusa. Se desconfiar, confira:
 
 ```bash
 file -L .prefix/drive_c/windows/system32/d3d11.dll   # tem que dizer x86-64
 ```
 
-Se disser `i386`, refaça os links apontando pro `lib64`. Animação em `.webm` é
-VP8, que o Unity decodifica sozinho: nada disso se aplica.
+Animação em `.webm` é VP8, que o Unity decodifica sozinho: nada disso se aplica.
 
 ---
 
@@ -290,11 +289,19 @@ Lido pelo Batocera **e** pelo `play.sh`. Precisa de quebra de linha **LF**
 CMD=jogo.exe                      # obrigatório; entre aspas se tiver espaço
 DIR=64bit/bin                     # opcional, relativo à pasta .pc
 ENV=WINEDLLOVERRIDES="d3d11=n"    # opcional, repetível
+SCREEN=native                     # opcional, só o play.sh lê
 LANG=pt_BR.UTF-8                  # opcional
 SAVEDIR=drive_c/users/...         # opcional, Batocera v42+
 ```
 
 Argumentos vão junto do `CMD`: `CMD="Meu Jogo.exe" --fullscreen`
+
+O `SCREEN=native` o `build.sh` escreve sozinho em jogo Unity. Na hora de rodar,
+o `play.sh` lê o modo preferido da tela em `/sys/class/drm/*/modes` — sem
+`xrandr`, então funciona no Batocera também — e acrescenta `-screen-width`,
+`-screen-height` e `-screen-fullscreen 1` ao `CMD`. Os números são da máquina
+que joga, não da que empacotou, que é o motivo de não virem prontos no arquivo.
+`GOG2LINUX_SCREEN=1280x720` fixa um tamanho, `GOG2LINUX_SCREEN=no` desliga.
 
 ---
 

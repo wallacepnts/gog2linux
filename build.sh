@@ -71,6 +71,7 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_DXCFG="obs: dxcfg.ini estava em janela; mudei para tela cheia (edite o arquivo para voltar)"
     M_REG="obs: gog-registry.reg gerado; o play.sh aplica ao criar o prefixo"
     M_WRAPPERS="obs: wrappers do jogo tem prioridade sobre os do wine: %s\n"
+    M_SCREEN="obs: jogo Unity - o play.sh vai pedir a resolucao nativa da tela\n"
     M_UNITY_MF="obs: jogo Unity com animacao em .mp4 - DXVK pedido no autorun.cmd\n"
     M_UNITY_MF2="  sem ele a animacao fica preta: o dxgi do wine nao entrega o quadro decodificado"
     M_OTHERS="outras entradas no goggame-*.info: %s\n"
@@ -131,6 +132,7 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_DXCFG="note: dxcfg.ini was set to windowed; switched to fullscreen (edit the file to revert)"
     M_REG="note: gog-registry.reg written; play.sh applies it when it creates the prefix"
     M_WRAPPERS="note: bundled wrappers given priority over wine's own: %s\n"
+    M_SCREEN="note: Unity game - play.sh will ask for the screen's native resolution\n"
     M_UNITY_MF="note: Unity game with .mp4 cutscenes - asking for DXVK in autorun.cmd\n"
     M_UNITY_MF2="  without it the cutscenes are black: wine's dxgi never hands the frame over"
     M_OTHERS="other entries in goggame-*.info: %s\n"
@@ -571,8 +573,10 @@ done
 # decodes by itself, and needs none of this.
 # kept apart from $wrappers: those are the game's own DLLs, this is a request
 # for one wine does not ship, and saying so in the same breath would be a lie
+unity=
+[ -f "$target/UnityPlayer.dll" ] && unity=yes
 unity_mf=
-if [ -f "$target/UnityPlayer.dll" ] &&
+if [ -n "$unity" ] &&
    [ -n "$(find "$target" -iname '*.mp4' -print -quit 2>/dev/null)" ]; then
   unity_mf="d3d11,dxgi"
 fi
@@ -580,6 +584,10 @@ overrides="$wrappers${wrappers:+${unity_mf:+,}}$unity_mf"
 
 {
   [ -n "$overrides" ] && printf 'ENV=WINEDLLOVERRIDES="%s=n,b"\n' "$overrides"
+  # a Unity player left to itself picks a 16:9 mode and lets the compositor
+  # stretch it. The numbers belong to the machine that plays, so play.sh fills
+  # them in; here we only say that this game wants them.
+  [ -n "$unity" ] && printf 'SCREEN=native\n' 
   printf 'CMD=%s\n' "$exe"
 } > "$target/autorun.cmd"
 cp "$here/play.sh" "$here/uninstall.sh" "$here/saves.sh" "$target/"
@@ -830,6 +838,7 @@ esac
 
 printf "$M_DONE" "$target" "$exe"
 [ -n "$wrappers" ] && printf "$M_WRAPPERS" "$wrappers"
+[ -n "$unity" ] && printf "$M_SCREEN"
 if [ -n "$unity_mf" ]; then
   printf "$M_UNITY_MF"
   echo "$M_UNITY_MF2"

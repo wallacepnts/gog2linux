@@ -17,10 +17,12 @@ die() { echo "$*" >&2; exit 1; }
 case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
   pt*) M_NO_AUTORUN="autorun.cmd nao encontrado em %s\n"
        M_NO_CMD="autorun.cmd sem linha CMD= em %s\n"
-       M_NO_EXEC="aviso: %s sem permissao de execucao, seguindo pelo wine\n" ;;
+       M_NO_EXEC="aviso: %s sem permissao de execucao, seguindo pelo wine\n"
+       M_DXVK="dxvk ligado no prefixo, de %s\n" ;;
   *)   M_NO_AUTORUN="autorun.cmd not found in %s\n"
        M_NO_CMD="autorun.cmd has no CMD= line in %s\n"
-       M_NO_EXEC="warning: %s is not executable, falling back to wine\n" ;;
+       M_NO_EXEC="warning: %s is not executable, falling back to wine\n"
+       M_DXVK="dxvk wired into the prefix, from %s\n" ;;
 esac
 
 target=$(readlink -f "${1:-$(dirname "$(readlink -f "$0")")}")
@@ -98,7 +100,7 @@ fi
 
 [ -e "$target/autorun.cmd" ] || die "$(printf "$M_NO_AUTORUN" "$target")"
 
-DIR=. CMD= GAMELANG=
+DIR=. CMD= GAMELANG= SCREEN=
 # `|| [ -n "$line" ]` rescues the last line when the trailing \n is missing
 while IFS= read -r line || [ -n "$line" ]; do
   case "$line" in
@@ -106,6 +108,7 @@ while IFS= read -r line || [ -n "$line" ]; do
     CMD=*)  CMD=${line#CMD=} ;;
     ENV=*)  eval "export ${line#ENV=}" ;;
     LANG=*) GAMELANG=${line#LANG=} ;;
+    SCREEN=*) SCREEN=${line#SCREEN=} ;;
   esac
 done < <(tr -d '\r' < "$target/autorun.cmd")   # autorun.cmd often comes with CRLF
 
@@ -158,6 +161,51 @@ if [ -f "$target/gog-registry.reg" ] && [ "$(cat "$stamp" 2>/dev/null)" != "$tar
 fi
 
 [ -n "$GAMELANG" ] && export LC_ALL="$GAMELANG"
+
+# A Unity player left to itself picks a 16:9 mode, and a 16:10 screen then gets
+# it stretched by whoever composites -- which is not antialiasing wearing off,
+# it is resampling. Asking for the screen's own mode removes the step entirely.
+# GOG2LINUX_SCREEN=1280x720 pins a size, GOG2LINUX_SCREEN=no leaves it alone.
+if [ "$SCREEN" = native ] && [ -z "$override" ] && [ "${GOG2LINUX_SCREEN:-}" != no ]; then
+  mode=${GOG2LINUX_SCREEN:-}
+  if [ -z "$mode" ]; then
+    # first line of a connected output's mode list is the one it prefers; a
+    # disconnected output has an empty file. No xrandr, so Batocera has it too.
+    for modes in /sys/class/drm/*/modes; do
+      read -r mode < "$modes" 2>/dev/null || continue
+      case "$mode" in [0-9]*x[0-9]*) break ;; *) mode= ;; esac
+    done
+  fi
+  case "$mode" in
+    [0-9]*x[0-9]*) CMD="$CMD -screen-width ${mode%x*} -screen-height ${mode#*x} -screen-fullscreen 1" ;;
+  esac
+fi
+
+# The ENV= line can ask for DXVK, but asking is not having: the DLLs have to be
+# in the prefix, and only this machine knows where its distro keeps them. On
+# Batocera none of these paths exist -- there DXVK is a switch in the options.
+case "${WINEDLLOVERRIDES:-}" in
+  *dxgi*)
+    sys="$WINEPREFIX/drive_c/windows/system32"
+    if [ ! -L "$sys/d3d11.dll" ]; then
+      for dxvk in /usr/libexec/dxvk/lib64 /usr/share/dxvk/x64 /usr/lib/dxvk/x64 /opt/dxvk/x64; do
+        [ -f "$dxvk/d3d11.dll" ] || continue
+        # the prefix has to exist before anything can be put in it
+        [ -d "$sys" ] || "${WINE:-wine}" wineboot -u >/dev/null 2>&1
+        [ -d "$sys" ] || break
+        # the 64-bit directory by name: openSUSE's own setup script hands the
+        # 32-bit build to a 64-bit prefix, and wine then falls back in silence
+        for dll in d3d11 dxgi d3d10core d3d9 d3d8; do
+          [ -f "$dxvk/$dll.dll" ] || continue
+          [ -e "$sys/$dll.dll" ] && [ ! -L "$sys/$dll.dll" ] &&
+            mv "$sys/$dll.dll" "$sys/$dll.dll.old"
+          ln -sfn "$dxvk/$dll.dll" "$sys/$dll.dll"
+        done
+        printf "$M_DXVK" "$dxvk" >&2
+        break
+      done
+    fi ;;
+esac
 
 cd "$target/$DIR"
 
