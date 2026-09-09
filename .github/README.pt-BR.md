@@ -31,37 +31,70 @@ Extras conforme o caso: `squashfs-tools` (abrir `.wsquashfs`), `winetricks`
 
 ## Regra universal: qualquer jogo GOG em 3 passos
 
-**Uma pasta por jogo.** Você cria a pasta, joga os instaladores dentro e põe as
-DLCs numa subpasta `dlc/`. O nome da pasta é o nome do jogo:
+**Tudo que estiver em `install/` é um jogo.** Uma pasta por jogo, com as DLCs
+numa `dlc/` dentro dela — ou o instalador solto, quando o jogo não tem DLC:
 
 ```
-being/
-├── setup_being_a_dik_-_season_1_(58051).exe     <- base
-├── setup_being_a_dik_-_season_1_(58051)-1.bin   <- as partes vêm junto
-├── setup_being_a_dik_-_season_1_(58051)-2.bin
-└── dlc/
-    ├── setup_being_a_dik_-_season_2_(58051).exe
-    └── setup_being_a_dik_..._official_guide_(58051).exe
+install/
+├── setup_outro_jogo_1.2.3.exe                   <- solto: um jogo sem DLC
+├── setup_outro_jogo_1.2.3-1.bin
+└── being/                                       <- pasta: o jogo e o que vem com ele
+    ├── setup_being_a_dik_-_season_1_(58051).exe
+    ├── setup_being_a_dik_-_season_1_(58051)-1.bin
+    ├── setup_being_a_dik_-_season_1_(58051)-2.bin
+    └── dlc/
+        ├── setup_being_a_dik_-_season_2_(58051).exe
+        └── setup_being_a_dik_..._official_guide_(58051).exe
 ```
 
 ```bash
-# 1. empacotar (uma vez, em qualquer PC Linux)
-./build.sh being                 # being/ -> being.pc
+# 1. empacotar tudo que estiver em install/
+./build.sh
 
 # 2. testar na sua distro
-./being.pc/play.sh
+./"Being a DIK - Season 1.pc"/play.sh
 
 # 3. levar pro Batocera
-cp -r being.pc /userdata/roms/windows/
+cp -r "Being a DIK - Season 1.pc" /userdata/roms/windows/
 ```
 
-O `.exe` da raiz é a base, os das subpastas são as DLCs, e os `.bin` ficam de
-fora — o innoextract junta as partes sozinho. Com o `.pc` pronto, o `build.sh`
-pergunta se pode apagar `being/`; diga sim depois que o jogo abrir, e você
-recupera os gigas do download. O padrão é **não**, então Enter guarda tudo.
+Ele lista o que achou e deixa você escolher:
 
-Não precisa mexer em nada se não quiser: a pasta que a GOG entregou já tem esse
-formato e vale como argumento do jeito que veio — só que aí o destino é seu:
+```
+install/: 3 jogo(s) encontrado(s)
+   1) being
+   2) outro
+   3) Being a DIK - Season 1                 setup_being_a_dik.exe
+Instalar quais? [Enter = todos; ex: 1 3, ou 1-2]:
+```
+
+Enter leva tudo; `1 3` escolhe avulsos, `1-2` é faixa, e vírgula também vale.
+Em script, sem terminal, não há pergunta: empacota a caixa inteira.
+
+**O nome sai do cabeçalho do instalador** — é o mesmo que a GOG usa, e você não
+digita nada. Quando o nome vem de lá, a coluna da direita mostra de onde saiu,
+como no item 3 acima; quando o cabeçalho não diz nada, fica valendo o nome da
+pasta, como nos itens 1 e 2. Os `.pc` nascem ao lado do `install/`, na raiz do
+repo, porque o `install/` é caixa de entrada e vai ser esvaziado. O que não for
+instalador InnoSetup é ignorado com aviso; os `.bin` são as partes e ficam
+quietos.
+
+Um jogo por vez, cada um no seu processo: instalador ruim custa o próprio jogo,
+não a leva inteira. No fim, se todos deram certo, ele pergunta se pode apagar os
+instaladores **dos jogos que empacotou** — o que você deixou pra depois continua
+lá. Padrão **não**, diga sim quando os jogos abrirem. Se algum falhar, nada é
+apagado: os instaladores são a única coisa que reconstrói a pasta.
+
+Quer nomear o `.pc` você mesmo, ou empacotar algo que está fora do `install/`?
+Os dois modos antigos continuam valendo. Uma pasta com os instaladores vira o
+`.pc` de mesmo nome:
+
+```bash
+./build.sh being                 # being/ -> being.pc
+```
+
+E a pasta que a GOG entregou vale como argumento do jeito que veio, com o
+destino que você escolher:
 
 ```bash
 ./build.sh Jogo.pc "/caminho/Jogo_1.2.3_(58051)_win_gog"

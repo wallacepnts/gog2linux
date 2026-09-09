@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # GOG installer (InnoSetup) -> .pc folder that runs on Batocera and on any distro.
 #
+#   ./build.sh                                   packages everything in install/
 #   ./build.sh Game                              Game/ holds the installers -> Game.pc
 #   ./build.sh Game.pc gog-folder/               package (base + DLCs)
 #   ./build.sh Game.pc setup.exe dlc.exe ...     same, one path at a time
@@ -9,6 +10,14 @@ set -euo pipefail
 shopt -s dotglob nullglob
 
 die() { echo "$*" >&2; exit 1; }
+
+# GOG's own title, straight from the InnoSetup header. It names the .pc folder,
+# so nothing in install/ has to be named by hand; empty means "not an installer"
+gog_title() {
+  innoextract -i "$1" 2>/dev/null |
+    sed -n '1s|^Inspecting "\(.*\)" - setup data version.*|\1|p' |
+    tr '/' '-'
+}
 
 # GOG labels languages by code; a list of codes is not a menu anyone can read.
 lang_name() {
@@ -29,10 +38,11 @@ lang_name() {
 # GOG2LINUX_LANG=pt or =en. No gettext, no .po files, no runtime dependency.
 case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
   pt*)
-    M_USAGE="uso: %s [--desktop|--no-desktop] [--lang CODIGO|all] ALVO [instaladores ...]\n\
-  Jogo      pasta com os instaladores (e uma dlc/ opcional) -> vira Jogo.pc\n\
-  Jogo.pc   pasta-da-gog (ou setup.exe dlc.exe ...)\n\
-  Jogo.pc   sozinho, so reclassifica uma pasta ja extraida\n"
+    M_USAGE="uso: %s [--desktop|--no-desktop] [--lang CODIGO|all] [ALVO [instaladores ...]]\n\
+  (sem nada)  empacota tudo que estiver em install/\n\
+  Jogo        pasta com os instaladores (e uma dlc/ opcional) -> vira Jogo.pc\n\
+  Jogo.pc     pasta-da-gog (ou setup.exe dlc.exe ...)\n\
+  Jogo.pc     sozinho, so reclassifica uma pasta ja extraida\n"
     M_NO_INNO="falta o innoextract: instale o pacote innoextract (apt/dnf/pacman/zypper)"
     M_NO_PY="falta o python3: instale o pacote python3"
     M_NOT_DEST="o primeiro argumento e a pasta de destino, nao o instalador"
@@ -71,12 +81,22 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_ASK_STAGE='Apagar os instaladores em "%s"? [s/N] '
     M_STAGE_GONE="instaladores apagados: %s\n"
     M_STAGE_KEPT="instaladores mantidos em: %s (apague quando o jogo abrir)\n"
+    M_INBOX="install/: %s jogo(s) encontrado(s)\n"
+    M_ASK_PICK="Instalar quais? [Enter = todos; ex: 1 3, ou 1-2]: "
+    M_ALL="todos"
+    M_BAD_PICK="escolha invalida: %s\n"
+    M_ASK_DONE='Apagar os instaladores dos %s jogo(s) empacotados? [s/N] '
+    M_INBOX_GAME="\n== %s -> %s ==\n"
+    M_INBOX_SKIP="ignorado, nao e instalador InnoSetup: %s\n"
+    M_INBOX_EMPTY="nada em %s\n  ponha um setup_*.exe solto, ou uma pasta por jogo com as DLCs numa dlc/\n"
+    M_INBOX_FAIL="%s jogo(s) falharam - nada foi apagado\n"
     ;;
   *)
-    M_USAGE="usage: %s [--desktop|--no-desktop] [--lang CODE|all] TARGET [installers ...]\n\
-  Game      folder holding the installers (and an optional dlc/) -> becomes Game.pc\n\
-  Game.pc   gog-folder (or setup.exe dlc.exe ...)\n\
-  Game.pc   on its own, only reclassifies an already extracted folder\n"
+    M_USAGE="usage: %s [--desktop|--no-desktop] [--lang CODE|all] [TARGET [installers ...]]\n\
+  (nothing)   packages everything sitting in install/\n\
+  Game        folder holding the installers (and an optional dlc/) -> becomes Game.pc\n\
+  Game.pc     gog-folder (or setup.exe dlc.exe ...)\n\
+  Game.pc     on its own, only reclassifies an already extracted folder\n"
     M_NO_INNO="innoextract is missing: install the innoextract package (apt/dnf/pacman/zypper)"
     M_NO_PY="python3 is missing: install the python3 package"
     M_NOT_DEST="first argument is the destination folder, not the installer"
@@ -115,28 +135,135 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_ASK_STAGE='Delete the installers in "%s"? [y/N] '
     M_STAGE_GONE="installers deleted: %s\n"
     M_STAGE_KEPT="installers kept in: %s (delete them once the game runs)\n"
+    M_INBOX="install/: %s game(s) found\n"
+    M_ASK_PICK="Install which? [Enter = all; e.g. 1 3, or 1-2]: "
+    M_ALL="all"
+    M_BAD_PICK="not a valid choice: %s\n"
+    M_ASK_DONE='Delete the installers of the %s game(s) packaged? [y/N] '
+    M_INBOX_GAME="\n== %s -> %s ==\n"
+    M_INBOX_SKIP="skipped, not an InnoSetup installer: %s\n"
+    M_INBOX_EMPTY="nothing in %s\n  drop a loose setup_*.exe in, or one folder per game with its DLCs in dlc/\n"
+    M_INBOX_FAIL="%s game(s) failed - nothing was deleted\n"
     ;;
 esac
 
 
 desktop=ask
 lang=auto
+flags=()   # kept verbatim: the install/ pass below re-runs this script per game
 while [ $# -gt 0 ]; do
   case "$1" in
-    --desktop)    desktop=yes; shift ;;
-    --no-desktop) desktop=no;  shift ;;
-    --lang)       lang=${2:-}; shift 2 ;;
-    --lang=*)     lang=${1#--lang=}; shift ;;
+    --desktop)    desktop=yes; flags+=("$1"); shift ;;
+    --no-desktop) desktop=no;  flags+=("$1"); shift ;;
+    --lang)       lang=${2:-}; flags+=("$1" "${2:-}"); shift 2 ;;
+    --lang=*)     lang=${1#--lang=}; flags+=("$1"); shift ;;
+    # without this, --help lands in readlink -f and comes back as its own usage
+    -h|--help)    printf "$M_USAGE" "$0"; exit 0 ;;
     *)            break ;;
   esac
 done
+here=$(dirname "$(readlink -f "$0")")
+
+# install/ is the inbox: one folder per game (with its dlc/), or a loose
+# installer that names itself. Drop the downloads in, run ./build.sh, walk away.
+inbox=${GOG2LINUX_INBOX:-$here/install}
+if [ $# -eq 0 ] && [ -d "$inbox" ]; then
+  command -v innoextract >/dev/null || die "$M_NO_INNO"
+  games=() names=()
+  for item in "$inbox"/*; do
+    if [ -d "$item" ]; then
+      # the base installer sits at the root; the dlc/ ones do not name the game
+      title=
+      for probe in "$item"/*.exe; do
+        title=$(gog_title "$probe") || title=
+        [ -n "$title" ] && break
+      done
+      # a folder the header cannot name still packages, under its own name
+      games+=("$item"); names+=("${title:-$(basename "$item")}")
+    else
+      title=$(gog_title "$item") || title=
+      if [ -n "$title" ]; then
+        games+=("$item"); names+=("$title")
+      else
+        # .bin slices belong to an installer and are not games of their own
+        case "$item" in *.exe) printf "$M_INBOX_SKIP" "$(basename "$item")" ;; esac
+      fi
+    fi
+  done
+  [ ${#games[@]} -gt 0 ] || die "$(printf "$M_INBOX_EMPTY" "$inbox")"
+  # the games land beside the inbox, not inside it: the inbox gets emptied
+  root=$(dirname "$inbox")
+
+  printf "$M_INBOX" "${#games[@]}"
+  for i in "${!games[@]}"; do
+    item=$(basename "${games[$i]}")
+    # the source is worth showing only when the header renamed the game
+    if [ "$item" = "${names[$i]}" ]; then
+      printf '  %2d) %s\n' "$((i + 1))" "${names[$i]}"
+    else
+      printf '  %2d) %-38s %s\n' "$((i + 1))" "${names[$i]}" "$item"
+    fi
+  done
+
+  # only ask when someone is watching; a script gets the whole inbox
+  if [ -t 0 ]; then
+    printf "$M_ASK_PICK"
+    read -r answer
+    case "$answer" in
+      ''|all|"$M_ALL") ;;
+      *) chosen=() chosen_names=()
+         for token in ${answer//,/ }; do
+           case "$token" in
+             *-*) first=${token%%-*}; last=${token##*-} ;;
+             *)   first=$token; last=$token ;;
+           esac
+           case "$first$last" in ''|*[!0-9]*) die "$(printf "$M_BAD_PICK" "$token")" ;; esac
+           for n in $(seq "$first" "$last"); do
+             [ "$n" -ge 1 ] && [ "$n" -le ${#games[@]} ] ||
+               die "$(printf "$M_BAD_PICK" "$n")"
+             chosen+=("${games[$((n - 1))]}"); chosen_names+=("${names[$((n - 1))]}")
+           done
+         done
+         games=("${chosen[@]}"); names=("${chosen_names[@]}") ;;
+    esac
+  fi
+
+  failed=0
+  for i in "${!games[@]}"; do
+    printf "$M_INBOX_GAME" "$(basename "${games[$i]}")" "${names[$i]}.pc"
+    # one game per run: a bad installer costs its own game, not the whole batch
+    "$here/$(basename "$0")" ${flags[@]+"${flags[@]}"} \
+      "$root/${names[$i]}.pc" "${games[$i]}" || failed=$((failed + 1))
+  done
+
+  if [ "$failed" -gt 0 ]; then
+    printf "$M_INBOX_FAIL" "$failed"
+    printf "$M_STAGE_KEPT" "$inbox"
+    exit 1
+  fi
+  answer=n
+  if [ -t 0 ]; then
+    printf "$M_ASK_DONE" "${#games[@]}"
+    read -r answer
+  fi
+  case "$answer" in
+    # only what was packaged: the inbox may still hold games left for later,
+    # and a loose installer takes its .bin slices with it
+    ["$M_YES"]*) for i in "${!games[@]}"; do
+                   rm -rf "${games[$i]}" "${games[$i]%.exe}"-*.bin
+                 done
+                 printf "$M_STAGE_GONE" "$inbox" ;;
+    *)           printf "$M_STAGE_KEPT" "$inbox" ;;
+  esac
+  exit 0
+fi
 
 [ $# -ge 1 ] || die "$(printf "$M_USAGE" "$0")"
 command -v innoextract >/dev/null ||
   die "$M_NO_INNO"
 command -v python3 >/dev/null || die "$M_NO_PY"
 
-target=$(readlink -f "$1"); shift
+target=$(readlink -f -- "$1"); shift
 
 # a forgotten destination turns the installer into $1 and mkdir fails cryptically
 [ -f "$target" ] && die "$M_NOT_DEST
@@ -425,7 +552,6 @@ done
   [ -n "$wrappers" ] && printf 'ENV=WINEDLLOVERRIDES="%s=n,b"\n' "$wrappers"
   printf 'CMD=%s\n' "$exe"
 } > "$target/autorun.cmd"
-here=$(dirname "$(readlink -f "$0")")
 cp "$here/play.sh" "$here/uninstall.sh" "$here/saves.sh" "$target/"
 # GOG's DirectDraw wrapper ships set to windowed. On a desktop that is a small
 # box in the corner; on Batocera it is worse. Flip it, and say so.

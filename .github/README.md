@@ -31,39 +31,72 @@ want a Microsoft DLL).
 
 ## The universal rule: any GOG game in 3 steps
 
-**One folder per game.** You make the folder, drop the installers in, and put
-the DLCs in a `dlc/` subfolder. The folder's name is the game's name:
+**Whatever sits in `install/` is a game.** One folder per game, with its DLCs in
+a `dlc/` inside it — or a loose installer, when the game has no DLC:
 
 ```
-being/
-├── setup_being_a_dik_-_season_1_(58051).exe     <- base
-├── setup_being_a_dik_-_season_1_(58051)-1.bin   <- the parts come along
-├── setup_being_a_dik_-_season_1_(58051)-2.bin
-└── dlc/
-    ├── setup_being_a_dik_-_season_2_(58051).exe
-    └── setup_being_a_dik_..._official_guide_(58051).exe
+install/
+├── setup_other_game_1.2.3.exe                   <- loose: a game with no DLC
+├── setup_other_game_1.2.3-1.bin
+└── being/                                       <- a folder: the game and what comes with it
+    ├── setup_being_a_dik_-_season_1_(58051).exe
+    ├── setup_being_a_dik_-_season_1_(58051)-1.bin
+    ├── setup_being_a_dik_-_season_1_(58051)-2.bin
+    └── dlc/
+        ├── setup_being_a_dik_-_season_2_(58051).exe
+        └── setup_being_a_dik_..._official_guide_(58051).exe
 ```
 
 ```bash
-# 1. package (once, on any Linux PC)
-./build.sh being                 # being/ -> being.pc
+# 1. package everything sitting in install/
+./build.sh
 
 # 2. test it on your distro
-./being.pc/play.sh
+./"Being a DIK - Season 1.pc"/play.sh
 
 # 3. take it to Batocera
-cp -r being.pc /userdata/roms/windows/
+cp -r "Being a DIK - Season 1.pc" /userdata/roms/windows/
 ```
 
-The `.exe` at the root is the base, the ones in subfolders are the DLCs, and the
-`.bin` parts stay out of it — innoextract pulls them together on its own. Once
-the `.pc` is built, `build.sh` asks whether it may delete `being/`; say yes after
-the game starts and you get the download's gigabytes back. The default is **no**,
-so Enter keeps everything.
+It lists what it found and lets you choose:
 
-You do not have to move anything if you would rather not: the folder GOG handed
-you already has that shape and works as an argument exactly as it came — only
-then the destination is yours to name:
+```
+install/: 3 game(s) found
+   1) being
+   2) outro
+   3) Being a DIK - Season 1                 setup_being_a_dik.exe
+Install which? [Enter = all; e.g. 1 3, or 1-2]:
+```
+
+Enter takes everything; `1 3` picks individually, `1-2` is a range, and commas
+work too. In a script, with no terminal, there is no question: the whole inbox
+gets packaged.
+
+**The name comes out of the installer header** — the same one GOG uses, and you
+type none of it. When the name came from there, the right-hand column shows what
+it came from, as in item 3 above; when the header says nothing, the folder's own
+name stands, as in items 1 and 2. The folders land beside `install/`, in the
+repo root, because `install/` is an inbox and is meant to be emptied. Anything
+in there that is not an InnoSetup installer is skipped with a note; `.bin` files
+are the parts and stay quiet.
+
+One game per run, each in its own process: a bad installer costs its own game,
+not the whole batch. At the end, if every game made it, you are asked whether
+the installers **of the games it packaged** may go — whatever you left for later
+stays put. The default is **no**, say yes once the games start. If any game
+failed, nothing is deleted: the installers are the only thing that can rebuild
+the folder.
+
+Want to name the `.pc` yourself, or package something that lives outside
+`install/`? Both older modes still work. A folder holding the installers becomes
+the `.pc` of the same name:
+
+```bash
+./build.sh being                 # being/ -> being.pc
+```
+
+And the folder GOG handed you works as an argument exactly as it came, with
+whatever destination you pick:
 
 ```bash
 ./build.sh Game.pc "/path/Game_1.2.3_(58051)_win_gog"

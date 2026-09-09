@@ -42,6 +42,24 @@ mkdir -p "$tmp/plain"; touch "$tmp/plain/game.exe"
 has plain "$("$here/build.sh" "$tmp/plain")" "CMD=game.exe"
 [ ! -d "$tmp/plain.pc" ] || { echo "FAILED: took an extracted folder for installers"; exit 1; }
 
+# install/ is the inbox: every folder is a game, every loose file that carries an
+# InnoSetup header is a game, and anything else is left alone
+mkdir -p "$tmp/inbox/being/dlc"
+touch "$tmp/inbox/being/setup_g.exe" "$tmp/inbox/being/dlc/setup_d.exe" "$tmp/inbox/junk.exe"
+inbox=$(GOG2LINUX_INBOX="$tmp/inbox" "$here/build.sh" 2>&1 || true)
+has inbox "$inbox" "1 game(s) found"
+has inbox-skip "$inbox" "not an InnoSetup installer: junk.exe"
+has inbox-name "$inbox" "being -> being.pc"
+# the game lands beside the inbox, never inside it -- the inbox gets emptied
+[ ! -e "$tmp/inbox/being.pc" ] || { echo "FAILED: built inside the inbox"; exit 1; }
+# a failed game keeps every installer: they are all that can rebuild it
+has inbox-fail "$inbox" "1 game(s) failed"
+[ -e "$tmp/inbox/being/setup_g.exe" ] || { echo "FAILED: deleted installers after a failure"; exit 1; }
+
+# an empty inbox says what to put in it rather than exiting as if all was well
+mkdir -p "$tmp/emptybox"
+! GOG2LINUX_INBOX="$tmp/emptybox" "$here/build.sh" >/dev/null 2>&1 || { echo "FAILED: empty inbox exited 0"; exit 1; }
+
 # DOSBox game in disguise: warns and writes no autorun.cmd
 mkdir -p "$tmp/dos.pc/DOSBOX"
 has dos "$("$here/build.sh" "$tmp/dos.pc")" "dos game in disguise"
