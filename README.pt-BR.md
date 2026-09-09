@@ -85,27 +85,6 @@ instaladores **dos jogos que empacotou** — o que você deixou pra depois conti
 lá. Padrão **não**, diga sim quando os jogos abrirem. Se algum falhar, nada é
 apagado: os instaladores são a única coisa que reconstrói a pasta.
 
-Quer nomear o `.pc` você mesmo, ou empacotar algo que está fora do `install/`?
-Os dois modos antigos continuam valendo. Uma pasta com os instaladores vira o
-`.pc` de mesmo nome:
-
-```bash
-./build.sh being                 # being/ -> being.pc
-```
-
-E a pasta que a GOG entregou vale como argumento do jeito que veio, com o
-destino que você escolher:
-
-```bash
-./build.sh Jogo.pc "/caminho/Jogo_1.2.3_(58051)_win_gog"
-```
-
-E os caminhos avulsos continuam valendo, na ordem base → DLCs:
-
-```bash
-./build.sh Jogo.pc "/caminho/setup_jogo.exe" "/caminho/DLC/setup_dlc.exe"
-```
-
 O `build.sh` extrai o instalador base e as DLCs na mesma pasta (as DLCs
 sobrescrevem/mesclam), joga fora o andaime do instalador (`tmp/`, `__redist/`),
 lê o `goggame-*.info` pra descobrir o executável certo e escreve o
@@ -114,26 +93,15 @@ antes de gerar o `autorun.cmd` e diz qual sistema usar.
 
 **Regras que valem sempre:**
 
-1. **Ponha o caminho do instalador entre aspas.** Nome da GOG-Games quase sempre
-   tem parêntese ou espaço, e sem aspas o bash reclama de
-   `erro de sintaxe próximo ao token inesperado '('`:
-
-   ```bash
-   ./build.sh Jogo.pc "/caminho/game (45311)/setup_jogo_(arbys)_(45311).exe"
-   ./build.sh Jogo.pc ~/"HD/Downloads/game (45311)/setup.exe"   # til fora das aspas
-   ```
-
-   `~` não expande dentro de aspas — use `$HOME` ou deixe o til de fora. Na
-   dúvida, digite o começo e complete com **Tab**, que o bash escapa sozinho.
-2. **Passe o `.exe`, nunca os `.bin`.** Instalador GOG grande vem como
+1. **Passe o `.exe`, nunca os `.bin`.** Instalador GOG grande vem como
    `setup_jogo.exe` + `setup_jogo-1.bin` + `setup_jogo-2.bin`. O `--gog` do
    innoextract junta tudo sozinho — os `.bin` só precisam estar na mesma pasta.
-3. **DLC vem junto quando você passa a pasta**, em `dlc/` (ou qualquer
+2. **DLC vem junto quando você passa a pasta**, em `dlc/` (ou qualquer
    subpasta). Passando arquivo por arquivo, a ordem importa: base primeiro,
    DLCs depois. E **sem colchetes** — na linha `uso:` eles só marcam o que é
    opcional; copiados junto, viram parte do caminho e o `build.sh` para com
    `instalador nao encontrado: [/...`.
-4. **Instalador multi-idioma pergunta, e assume inglês.** A GOG entrega um
+3. **Instalador multi-idioma pergunta, e assume inglês.** A GOG entrega um
    instalador só, com todos os idiomas dentro; extrair tudo faz o último vencer
    os metadados — é assim que um jogo em inglês termina em italiano. Quando o
    instalador oferece mais de um idioma, o `build.sh` lista e espera:
@@ -163,11 +131,59 @@ antes de gerar o `autorun.cmd` e diz qual sistema usar.
 
    Em script não há pergunta: `--lang it-IT` escolhe um, `--lang all` guarda
    todos, e sem nenhum dos dois ele pega `en-*` calado.
-5. **Copie a pasta inteira** pro Batocera, sem o `.prefix/` (é o prefixo local,
+4. **Copie a pasta inteira** pro Batocera, sem o `.prefix/` (é o prefixo local,
    pesa uns 400 MB e o Batocera não usa).
-6. **`/userdata/` em btrfs ou ext4.** NTFS quebra wine, principalmente jogos
+5. **`/userdata/` em btrfs ou ext4.** NTFS quebra wine, principalmente jogos
    Steam/Galaxy.
-7. **Nome da pasta = nome que aparece na lista** do EmulationStation.
+6. **Nome da pasta = nome que aparece na lista** do EmulationStation.
+
+---
+
+## Outros jeitos de empacotar
+
+O `install/` é o caminho curto, não o único. Alvo e instaladores continuam
+valendo na linha de comando — é o que usar pra empacotar sem mexer na caixa, ou
+pra escolher o nome do `.pc`, que no `install/` vem do instalador:
+
+```bash
+# uma pasta com os instaladores vira o .pc de mesmo nome
+./build.sh being                                    # being/ -> being.pc
+
+# a pasta que a GOG entregou, com o destino que você escolher
+./build.sh Jogo.pc "/caminho/Jogo_1.2.3_(58051)_win_gog"
+
+# ou os caminhos avulsos, na ordem base -> DLCs
+./build.sh Jogo.pc "/caminho/setup_jogo.exe" "/caminho/DLC/setup_dlc.exe"
+
+# e, sem instalador nenhum, releitura de uma pasta já extraída
+./build.sh Jogo.pc
+```
+
+O último é o modo de conserto: relê o `goggame-*.info`, refaz a detecção e
+reescreve o `autorun.cmd` sem extrair nada. É o que rodar depois de mexer na
+pasta na mão, ou pra criar a entrada de menu de um jogo já empacotado
+(`./build.sh --desktop Jogo.pc`).
+
+**Ponha o caminho entre aspas.** Nome da GOG-Games quase sempre tem parêntese ou
+espaço, e sem aspas o bash reclama de
+`erro de sintaxe próximo ao token inesperado '('`:
+
+```bash
+./build.sh Jogo.pc "/caminho/game (45311)/setup_jogo_(arbys)_(45311).exe"
+./build.sh Jogo.pc ~/"HD/Downloads/game (45311)/setup.exe"   # til fora das aspas
+```
+
+`~` não expande dentro de aspas — use `$HOME` ou deixe o til de fora. Na dúvida,
+digite o começo e complete com **Tab**, que o bash escapa sozinho. Nada disso
+aparece no `install/`, onde você não digita caminho nenhum.
+
+A caixa de entrada também não precisa morar no repo:
+
+```bash
+GOG2LINUX_INBOX=/mnt/hd/downloads ./build.sh
+```
+
+Os `.pc` sempre nascem ao lado dela — nesse caso, em `/mnt/hd/`.
 
 ---
 
@@ -446,6 +462,7 @@ clássica e uma DirectX, e com frequência só a segunda sobrevive ao wine.
 | | |
 |---|---|
 | `build.sh` | instalador GOG → pasta `.pc` |
+| `install/` | caixa de entrada: o que estiver aqui é o que o `build.sh` empacota |
 | `play.sh` | roda `.pc`, `.wine`, `.wtgz` ou `.wsquashfs` fora do Batocera |
 | `uninstall.sh` | remove um jogo empacotado, seu prefixo e as entradas de menu |
 | `saves.sh` | faz backup e restaura os saves, dos dois lugares onde eles ficam |

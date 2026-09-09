@@ -261,7 +261,7 @@ while IFS='|' read -r _ games engine _; do
   esac
 # the "Whole catalogues" section is out of scope: ScummVM games are recognised
 # by the files in the installer, never by their name
-done < <(sed '/^## Whole catalogues/,$d' "$here/.github/ENGINES.md" | grep '^| ')
+done < <(sed '/^## Whole catalogues/,$d' "$here/ENGINES.md" | grep '^| ')
 [ -z "$missing" ] || { echo "FAILED: ENGINES.md lists games build.sh ignores: $missing"; exit 1; }
 
 # a classic with an open engine gets a heads-up, not a decision
