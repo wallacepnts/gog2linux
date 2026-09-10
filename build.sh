@@ -339,9 +339,6 @@ fi
 if [ $# -gt 0 ]; then
   setups=()
   for arg in "$@"; do
-    # copying the usage line verbatim leaves its brackets glued to the path
-    case "$arg" in \[*|*\]) die "$(printf "$M_BRACKETS" "$arg")
-$(printf "$M_USAGE" "$0")" ;; esac
     # a GOG download is one folder: base .exe at the root, DLCs in a subfolder,
     # and the .bin parts tag along on their own. Pass the folder, not the list.
     if [ -d "$arg" ]; then
@@ -349,9 +346,16 @@ $(printf "$M_USAGE" "$0")" ;; esac
       [ ${#found[@]} -gt 0 ] || die "$(printf "$M_EMPTY_DIR" "$arg")"
       printf "$M_FROM_DIR" "${#found[@]}" "$arg"
       setups+=("${found[@]}")
-    else
-      [ -f "$arg" ] || die "$(printf "$M_NO_SETUP" "$arg")"
+    elif [ -f "$arg" ]; then
       setups+=("$arg")
+    else
+      # Only now, with nothing at that path, are brackets worth mentioning:
+      # they usually mean the usage line was copied verbatim, where they mark
+      # what is optional. A real "Trials of Mana [GOG]" exists and never
+      # reaches here -- which is why this asks the filesystem first.
+      case "$arg" in \[*|*\]) die "$(printf "$M_BRACKETS" "$arg")
+$(printf "$M_USAGE" "$0")" ;; esac
+      die "$(printf "$M_NO_SETUP" "$arg")"
     fi
   done
   set -- "${setups[@]}"
