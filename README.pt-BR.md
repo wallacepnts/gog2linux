@@ -203,7 +203,7 @@ Lido pelo Batocera **e** pelo `play.sh`. Precisa de quebra de linha **LF**
 
 ```
 CMD=jogo.exe                      # obrigatório; entre aspas se tiver espaço
-DIR=64bit/bin                     # opcional, relativo à pasta .pc
+DIR=64bit/bin                     # opcional; o CMD é relativo a ele
 ENV=WINEDLLOVERRIDES="d3d11=n"    # opcional, repetível
 SCREEN=native                     # opcional, só o play.sh lê
 LANG=pt_BR.UTF-8                  # opcional
@@ -211,6 +211,10 @@ SAVEDIR=drive_c/users/...         # opcional, Batocera v42+
 ```
 
 Argumentos vão junto do `CMD`: `CMD="Meu Jogo.exe" --fullscreen`
+
+O `DIR=` sai do `workingDir` do `goggame-*.info`, quando a GOG informa um e o
+executável mora lá dentro. Jogo que carrega as DLLs por caminho relativo — um
+`Launcher64.exe` dentro de `x64/`, por exemplo — sai calado se rodar da raiz.
 
 O `SCREEN=native` o `build.sh` escreve sozinho em jogo Unity. Na hora de rodar,
 o `play.sh` lê o modo preferido da tela em `/sys/class/drm/*/modes` — sem

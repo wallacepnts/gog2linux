@@ -57,6 +57,7 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_ONLY_LANG="idioma: %s (%s) - o unico que este instalador traz\n"
     M_META="nao consegui ler os metadados da GOG (veja o erro do python acima)"
     M_NO_EXE="nao achei o executavel do jogo em %s\n"
+    M_WORKDIR="obs: o jogo roda de dentro de %s/ - e o que a GOG pede\n"
     M_EXTRACTED="extraido: %s\n"
     M_WARN_KIND="ATENCAO: este e um jogo %s disfarcado. NAO passe pelo wine.\n"
     M_HERE="  aqui:"
@@ -118,6 +119,7 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_ONLY_LANG="language: %s (%s) - the only one this installer carries\n"
     M_META="could not read the GOG metadata (see the python error above)"
     M_NO_EXE="could not find the game executable in %s\n"
+    M_WORKDIR="note: the game runs from inside %s/ - which is what GOG asks for\n"
     M_EXTRACTED="extracted: %s\n"
     M_WARN_KIND="WARNING: this is a %s game in disguise. Do NOT run it through wine.\n"
     M_HERE="  here:"
@@ -414,16 +416,19 @@ for d in load('goggame-*.info'):
     langs |= {str(x).lower() for x in (d.get('languages') or [])}
     for t in d.get('playTasks') or []:
         path = (t.get('path') or '').replace('\\', '/')
+        # GOG records the directory the game has to run from; a launcher that
+        # loads its DLLs by relative path just exits when it is wrong
+        wd = (t.get('workingDir') or '').replace('\\', '/').strip('/')
         if path.lower().endswith('.exe'):
-            tasks.append((t.get('category'), t.get('isPrimary'), path))
+            tasks.append((t.get('category'), t.get('isPrimary'), path, '' if wd == '.' else wd))
 
 # a launcher wants a mouse and often starts a build wine cannot run; the entry
 # GOG tags as the game itself is the better default.
-chosen = ''
+chosen, chosen_dir = '', ''
 for wanted in (lambda c, p: c == 'game', lambda c, p: p, lambda c, p: True):
-    for cat, primary, path in tasks:
+    for cat, primary, path, wd in tasks:
         if wanted(cat, primary):
-            chosen = path
+            chosen, chosen_dir = path, wd
             break
     if chosen:
         break
@@ -485,14 +490,16 @@ if keys:
         fh.write('\n'.join(out))
 
 print(chosen)
-print(';'.join(sorted({p for _, _, p in tasks if p != chosen})))
+print(';'.join(sorted({p for _, _, p, _ in tasks if p != chosen})))
 print(name)
+print(chosen_dir)
 PYMETA
 ) || die "$M_META"
 
 exe=$(printf '%s\n' "$meta" | sed -n 1p)
 others=$(printf '%s\n' "$meta" | sed -n 2p)
 name=$(printf '%s\n' "$meta" | sed -n 3p)
+workdir=$(printf '%s\n' "$meta" | sed -n 4p)
 # no metadata: the folder name, with the first letter raised
 if [ -z "$name" ]; then
   name=$(basename "${target%.pc}")
@@ -551,6 +558,18 @@ fi
 if [ -z "$exe" ] || [ ! -e "$target/$exe" ]; then
   die "$(printf "$M_NO_EXE" "$target")"
 fi
+# play.sh cds into DIR and runs CMD from there, so the two have to agree. Only
+# worth it when the executable lives inside the working directory -- anywhere
+# else and the relative path back out costs more than it buys.
+if [ -n "$workdir" ] && [ -d "$target/$workdir" ]; then
+  case "$exe" in
+    "$workdir"/*) exe=${exe#"$workdir"/}; printf "$M_WORKDIR" "$workdir" ;;
+    *) workdir= ;;
+  esac
+else
+  workdir=
+fi
+
 case "$exe" in *\ *) exe="\"$exe\"" ;; esac
 
 # GOG ships graphics/input wrappers named after wine builtins - a scaling ddraw,
@@ -587,6 +606,7 @@ overrides="$wrappers${wrappers:+${unity_mf:+,}}$unity_mf"
   # a Unity player left to itself picks a 16:9 mode and lets the compositor
   # stretch it. The numbers belong to the machine that plays, so play.sh fills
   # them in; here we only say that this game wants them.
+  [ -n "$workdir" ] && printf 'DIR=%s\n' "$workdir"
   [ -n "$unity" ] && printf 'SCREEN=native\n' 
   printf 'CMD=%s\n' "$exe"
 } > "$target/autorun.cmd"

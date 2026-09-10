@@ -207,7 +207,7 @@ CRLF — CRLF is the number one cause of "it doesn't start".
 
 ```
 CMD=game.exe                      # required; quote it if it has spaces
-DIR=64bit/bin                     # optional, relative to the .pc folder
+DIR=64bit/bin                     # optional; CMD is relative to it
 ENV=WINEDLLOVERRIDES="d3d11=n"    # optional, repeatable
 SCREEN=native                     # optional, only play.sh reads it
 LANG=pt_BR.UTF-8                  # optional
@@ -215,6 +215,10 @@ SAVEDIR=drive_c/users/...         # optional, Batocera v42+
 ```
 
 Arguments ride along with `CMD`: `CMD="My Game.exe" --fullscreen`
+
+`DIR=` comes from `workingDir` in `goggame-*.info`, when GOG gives one and the
+executable lives inside it. A game that loads its DLLs by relative path — a
+`Launcher64.exe` inside `x64/`, say — exits without a word if run from the root.
 
 `SCREEN=native` is written by `build.sh` for a Unity game. At launch `play.sh`
 reads the screen's preferred mode from `/sys/class/drm/*/modes` — no `xrandr`, so

@@ -106,6 +106,23 @@ mkdir -p "$tmp/case.pc"; touch "$tmp/case.pc/Doom3.exe"
 printf '{"playTasks":[{"category":"game","path":"DOOM3.exe"}]}' > "$tmp/case.pc/goggame-1.info"
 has case "$("$here/build.sh" "$tmp/case.pc")" "CMD=Doom3.exe"
 
+# GOG's workingDir: play.sh cds there and CMD comes out relative to it, because
+# a launcher that loads its DLLs by relative path exits the moment it is wrong
+mkdir -p "$tmp/wd.pc/x64"; touch "$tmp/wd.pc/x64/Launcher64.exe"
+printf '{"playTasks":[{"category":"game","isPrimary":true,"path":"x64/Launcher64.exe","workingDir":"x64/"}]}' \
+  > "$tmp/wd.pc/goggame-1.info"
+has workdir "$("$here/build.sh" "$tmp/wd.pc")" "runs from inside x64/"
+has workdir-dir "$(cat "$tmp/wd.pc/autorun.cmd")" "DIR=x64"
+has workdir-cmd "$(cat "$tmp/wd.pc/autorun.cmd")" "CMD=Launcher64.exe"
+
+# a workingDir the executable does not live in buys nothing and is left alone
+mkdir -p "$tmp/wd2.pc/bin" "$tmp/wd2.pc/data"; touch "$tmp/wd2.pc/bin/game.exe"
+printf '{"playTasks":[{"category":"game","path":"bin/game.exe","workingDir":"data/"}]}' \
+  > "$tmp/wd2.pc/goggame-1.info"
+"$here/build.sh" "$tmp/wd2.pc" >/dev/null
+has workdir-skip "$(cat "$tmp/wd2.pc/autorun.cmd")" "CMD=bin/game.exe"
+grep -q '^DIR=' "$tmp/wd2.pc/autorun.cmd" && { echo "FAILED: cd'd away from the exe"; exit 1; }
+
 # launcher + game + tool: the game wins even when GOG marks the launcher primary
 mkdir -p "$tmp/multi.pc"
 touch "$tmp/multi.pc/Launcher.exe" "$tmp/multi.pc/Game_dx.exe" "$tmp/multi.pc/Editor.exe"
