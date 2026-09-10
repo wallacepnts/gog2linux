@@ -140,23 +140,30 @@ fi
 # them stale and the game acts as if it was never installed. The stamp records
 # what was applied, so a move re-applies instead of failing quietly.
 stamp="$WINEPREFIX/.gog-registry-path"
-if [ -f "$target/gog-registry.reg" ] && [ "$(cat "$stamp" 2>/dev/null)" != "$target" ]; then
+if [ "$(cat "$stamp" 2>/dev/null)" != "$target" ]; then
+  # gog-registry-once.reg holds what the installer only seeds -- a language the
+  # player later changed lives in there, so it goes in on a fresh prefix and
+  # never again. The other file is install paths, which a move makes stale.
+  [ -e "$stamp" ] && sources="gog-registry.reg" || sources="gog-registry.reg gog-registry-once.reg"
   app="Z:${target//\//\\}"
   app=${app//\\/\\\\}          # a .reg file wants its backslashes doubled
-  reg=$(mktemp)
-  # ${var//x/y} eats backslashes in the replacement, which mangles the path into
-  # something regedit reads as escapes. Splicing with printf keeps it literal.
-  while IFS= read -r line || [ -n "$line" ]; do
-    while :; do
-      case "$line" in
-        *%APP%*) line="${line%%%APP%*}$app${line#*%APP%}" ;;
-        *) break ;;
-      esac
-    done
-    printf '%s\n' "$line"
-  done < "$target/gog-registry.reg" > "$reg"
-  "${WINE:-wine}" regedit /S "$reg" 2>/dev/null || true
-  rm -f "$reg"
+  for source in $sources; do
+    [ -f "$target/$source" ] || continue
+    reg=$(mktemp)
+    # ${var//x/y} eats backslashes in the replacement, which mangles the path into
+    # something regedit reads as escapes. Splicing with printf keeps it literal.
+    while IFS= read -r line || [ -n "$line" ]; do
+      while :; do
+        case "$line" in
+          *%APP%*) line="${line%%%APP%*}$app${line#*%APP%}" ;;
+          *) break ;;
+        esac
+      done
+      printf '%s\n' "$line"
+    done < "$target/$source" > "$reg"
+    "${WINE:-wine}" regedit /S "$reg" 2>/dev/null || true
+    rm -f "$reg"
+  done
   mkdir -p "$WINEPREFIX" && printf '%s\n' "$target" > "$stamp"
 fi
 

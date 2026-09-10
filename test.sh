@@ -150,6 +150,52 @@ has reg-path "$reg" '"InstallPath"="%APP%"'
 has reg-wow "$reg" 'HKEY_LOCAL_MACHINE\Software\WOW6432Node\id'
 case "$reg" in *ita*) echo "FAILED reg-lang: kept an it-IT action in an en-US copy"; exit 1 ;; esac
 
+# GOG writes some subkeys with forward slashes and shouts SOFTWARE; regedit
+# would take "Software/Ubisoft/X" for a single key name and the game would never
+# find its own setting -- which is how a game installed in Portuguese stays in
+# English
+mkdir -p "$tmp/slash.pc"; touch "$tmp/slash.pc/Game.exe"
+printf '{"languages":["en-US"],"playTasks":[{"category":"game","path":"Game.exe"}]}' > "$tmp/slash.pc/goggame-1.info"
+cat > "$tmp/slash.pc/goggame-1.script" <<'SCRIPT'
+{"actions":[
+ {"languages":["*"],"install":{"action":"setRegistry","arguments":{
+   "root":"HKLM","subkey":"SOFTWARE/Ubisoft/Game/Settings","valueName":"Language","valueData":"0","valueType":"dword"}}}
+]}
+SCRIPT
+"$here/build.sh" "$tmp/slash.pc" >/dev/null
+sl=$(cat "$tmp/slash.pc/gog-registry.reg")
+has slash-key "$sl" 'HKEY_LOCAL_MACHINE\SOFTWARE\Ubisoft\Game\Settings'
+has slash-wow "$sl" 'HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Ubisoft\Game\Settings'
+case "$sl" in */Ubisoft*) echo "FAILED: left a forward slash in a registry key"; exit 1 ;; esac
+
+# onlyOnce values are what the installer seeds, not what the game must always
+# have: a language the player changed lives among them, so they go to a separate
+# file that play.sh only applies to a prefix it just created
+mkdir -p "$tmp/once.pc"; touch "$tmp/once.pc/Game.exe"
+printf '{"languages":["en-US"],"playTasks":[{"category":"game","path":"Game.exe"}]}' > "$tmp/once.pc/goggame-1.info"
+cat > "$tmp/once.pc/goggame-1.script" <<'SCRIPT'
+{"actions":[
+ {"languages":["*"],"install":{"action":"setRegistry","arguments":{
+   "root":"HKLM","subkey":"Software/id","valueName":"InstallPath","valueData":"{app}","valueType":"string"}}},
+ {"languages":["*"],"install":{"action":"setRegistry","arguments":{
+   "conditions":["onlyOnce"],
+   "root":"HKLM","subkey":"Software/id","valueName":"Language","valueData":"0","valueType":"dword"}}}
+]}
+SCRIPT
+"$here/build.sh" "$tmp/once.pc" >/dev/null
+has once-split "$(cat "$tmp/once.pc/gog-registry-once.reg")" '"Language"=dword:00000000'
+case "$(cat "$tmp/once.pc/gog-registry.reg")" in
+  *Language*) echo "FAILED: a onlyOnce value would be re-imposed on every move"; exit 1 ;;
+esac
+
+# a fresh prefix gets both files; one that already exists gets only the first
+cp "$here/play.sh" "$tmp/once.pc/"
+has once-fresh "$(run "$tmp/once.pc/play.sh")" "regedit /S"
+printf '%s\n' "$tmp/once.pc" > "$tmp/once.pc/.prefix/.gog-registry-path"
+printf 'elsewhere\n' > "$tmp/once.pc/.prefix/.gog-registry-path"
+moved=$(run "$tmp/once.pc/play.sh")
+eq once-moved "$(printf '%s\n' "$moved" | grep -c 'regedit /S')" "1"
+
 # Inno writes hex the Pascal way; an unreadable value is skipped, not fatal
 mkdir -p "$tmp/dw.pc"; touch "$tmp/dw.pc/Game.exe"
 printf '{"languages":["en-US"],"playTasks":[{"category":"game","path":"Game.exe"}]}' > "$tmp/dw.pc/goggame-1.info"

@@ -466,7 +466,10 @@ def value(kind, data):
     return '"%s"' % text
 
 
-keys = {}
+# GOG marks some values onlyOnce: they are what the installer seeds, not what
+# the game must always have. A language picked by the player lives among them,
+# and re-imposing the seed on every move would quietly undo the choice.
+keys, once = {}, {}
 for d in load('goggame-*.script'):
     for action in d.get('actions') or []:
         install = action.get('install') or {}
@@ -478,7 +481,11 @@ for d in load('goggame-*.script'):
         root = ROOTS.get(args.get('root') or '')
         if not root:
             continue
-        entries = keys.setdefault(root + '\\' + args.get('subkey', ''), [])
+        # GOG writes the subkey with forward slashes; the registry wants
+        # backslashes, and regedit takes "Software/Ubisoft/X" for one key name
+        subkey = (args.get('subkey') or '').replace('/', '\\').strip('\\')
+        where = once if 'onlyOnce' in (args.get('conditions') or []) else keys
+        entries = where.setdefault(root + '\\' + subkey, [])
         if args.get('valueName'):
             kind = args.get('valueType') or 'string'
             try:                  # a value we cannot read is worth skipping, not crashing over
@@ -488,20 +495,29 @@ for d in load('goggame-*.script'):
             entries.append((args['valueName'], kind, args.get('valueData')))
 
 
-if keys:
+def write_reg(table, path):
+    if not table:
+        return
     out = ['Windows Registry Editor Version 5.00', '']
-    for key, entries in keys.items():
+    for key, entries in table.items():
         # a 32-bit game in a win64 prefix reads HKLM\Software through WOW6432Node
         variants = [key]
-        if key.startswith('HKEY_LOCAL_MACHINE\\Software\\'):
-            variants.append(key.replace('HKEY_LOCAL_MACHINE\\Software\\',
-                                        'HKEY_LOCAL_MACHINE\\Software\\WOW6432Node\\', 1))
+        head = 'HKEY_LOCAL_MACHINE\\Software\\'
+        if key.upper().startswith(head.upper()):   # GOG shouts SOFTWARE sometimes
+            variants.append(key[:len(head)] + 'WOW6432Node\\' + key[len(head):])
         for k in variants:
             out.append('[%s]' % k)
             out += ['"%s"=%s' % (n, value(t, d)) for n, t, d in entries]
             out.append('')
-    with open(os.path.join(target, 'gog-registry.reg'), 'w', encoding='utf-8') as fh:
+    with open(os.path.join(target, path), 'w', encoding='utf-8') as fh:
         fh.write('\n'.join(out))
+
+
+for stale in ('gog-registry.reg', 'gog-registry-once.reg'):
+    if os.path.exists(os.path.join(target, stale)):
+        os.remove(os.path.join(target, stale))
+write_reg(keys, 'gog-registry.reg')
+write_reg(once, 'gog-registry-once.reg')
 
 print(chosen)
 print(';'.join(sorted({p for _, _, p, _ in tasks if p != chosen})))
