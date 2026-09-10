@@ -69,6 +69,7 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_NO_EXE="nao achei o executavel do jogo em %s\n"
     M_WORKDIR="obs: o jogo roda de dentro de %s/ - e o que a GOG pede\n"
     M_EXTRACTED="extraido: %s\n"
+    M_EXTRACTING="extraindo: %s\n"
     M_WARN_KIND="ATENCAO: este e um jogo %s disfarcado. NAO passe pelo wine.\n"
     M_HERE="  aqui:"
     M_BATOCERA="  Batocera:"
@@ -136,6 +137,7 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_NO_EXE="could not find the game executable in %s\n"
     M_WORKDIR="note: the game runs from inside %s/ - which is what GOG asks for\n"
     M_EXTRACTED="extracted: %s\n"
+    M_EXTRACTING="extracting: %s\n"
     M_WARN_KIND="WARNING: this is a %s game in disguise. Do NOT run it through wine.\n"
     M_HERE="  here:"
     M_BATOCERA="  Batocera:"
@@ -413,7 +415,13 @@ if [ $# -gt 0 ]; then
         printf "$M_LANG" "$pick" "$(lang_show "$pick")"
       fi
     fi
-    if ! innoextract --gog --silent --collisions=overwrite "${opts[@]}" -d "$target" "$setup"; then
+    # --silent eats the progress bar, and a 1.6 GB installer is minutes of
+    # silence without it. Put it back -- but only on a terminal: innoextract
+    # draws it wherever output goes, and a log of escape codes helps no one.
+    [ -t 1 ] && progress=1 || progress=0
+    printf "$M_EXTRACTING" "$(basename "$setup")"
+    if ! innoextract --gog --silent --progress=$progress --collisions=overwrite \
+                     "${opts[@]}" -d "$target" "$setup"; then
       # an installer past 4 GB ships as setup.exe + setup-1.bin + setup-2.bin,
       # and moving only the .exe is the usual way to end up here. Only worth
       # saying once innoextract has already failed: plenty of installers are a
