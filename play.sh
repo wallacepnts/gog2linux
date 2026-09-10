@@ -247,7 +247,10 @@ fi
 # paint a small picture in the corner of a big black window. Wrapping them in a
 # virtual desktop of that exact size gives an honest window instead.
 if [ -n "${WINE_DESKTOP:-}" ]; then
-  eval exec $inhibit $winecmd explorer "/desktop=${target##*/},$WINE_DESKTOP" "$CMD"
+  # the folder name goes into the desktop's name and can carry spaces, and this
+  # line goes through eval: without %q the argument arrives in pieces
+  eval exec $inhibit $winecmd explorer \
+       "$(printf '%q' "/desktop=${target##*/},$WINE_DESKTOP")" "$CMD"
 fi
 
 eval exec $inhibit $winecmd "$CMD"   # eval because CMD carries quotes and arguments

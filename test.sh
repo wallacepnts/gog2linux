@@ -598,6 +598,13 @@ printf 'CMD=game.exe\n' > "$tmp/sp.pc/autorun.cmd"
 eq wine-space "$(WINE="$tmp/two words/wine" WINE_GAMES="$tmp/cache" GOG2LINUX_INHIBIT=no \
                  "$tmp/sp.pc/play.sh")" "$tmp/sp.pc|$tmp/sp.pc/.prefix||game.exe"
 
+# WINE_DESKTOP names the virtual desktop after the folder, which can carry
+# spaces -- and that line goes through eval, so it has to arrive as one argument
+mkdir -p "$tmp/Two Words.pc"; cp "$here/play.sh" "$tmp/Two Words.pc/"
+printf 'CMD=game.exe\n' > "$tmp/Two Words.pc/autorun.cmd"
+eq desktop-space "$(WINE_DESKTOP=800x600 run "$tmp/Two Words.pc/play.sh")" \
+   "$tmp/Two Words.pc|$tmp/Two Words.pc/.prefix||explorer /desktop=Two Words.pc,800x600 game.exe"
+
 # native .sh without the execute bit: recover instead of dying with rc=126
 mkdir -p "$tmp/nx.pc/lib/py2-linux-x86_64"; cp "$here/play.sh" "$tmp/nx.pc/"
 printf 'CMD=game.exe\n' > "$tmp/nx.pc/autorun.cmd"
