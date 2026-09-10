@@ -9,6 +9,14 @@
 set -euo pipefail
 shopt -s dotglob nullglob
 
+# Everything below sits in one block on purpose. Bash reads a script as it goes,
+# by byte offset, so editing this file while it runs -- a git pull during a seven-minute extraction
+# -- makes it resume at whatever now sits at that offset, and it fails with
+# nonsense: a command named "ich", a variable that is plainly set reported as
+# unbound. A compound command is read whole before any of it runs, which closes
+# that door. The closing brace is the last line of the file.
+{
+
 die() { echo "$*" >&2; exit 1; }
 
 # GOG's own title, straight from the InnoSetup header. It names the .pc folder,
@@ -1132,3 +1140,5 @@ if [ -n "$staging" ]; then
     *)           printf "$M_STAGE_KEPT" "$staging" ;;
   esac
 fi
+
+}

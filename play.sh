@@ -12,6 +12,14 @@
 set -euo pipefail
 shopt -s nullglob
 
+# Everything below sits in one block on purpose. Bash reads a script as it goes,
+# by byte offset, so editing this file while it runs -- a git pull during a game already running
+# -- makes it resume at whatever now sits at that offset, and it fails with
+# nonsense: a command named "ich", a variable that is plainly set reported as
+# unbound. A compound command is read whole before any of it runs, which closes
+# that door. The closing brace is the last line of the file.
+{
+
 die() { echo "$*" >&2; exit 1; }
 
 case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
@@ -238,3 +246,5 @@ if [ -n "${WINE_DESKTOP:-}" ]; then
 fi
 
 eval exec $inhibit $winecmd "$CMD"   # eval because CMD carries quotes and arguments
+
+}
