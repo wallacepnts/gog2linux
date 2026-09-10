@@ -524,6 +524,14 @@ has inhibit-cmd "$awake" "$tmp/aw.pc|$tmp/aw.pc/.prefix||game.exe"
 eq inhibit-off "$(PATH="$tmp/bin:$PATH" WINE="$tmp/fakewine" GOG2LINUX_INHIBIT=no \
                   "$tmp/aw.pc/play.sh")" "$tmp/aw.pc|$tmp/aw.pc/.prefix||game.exe"
 
+# a wine binary whose path has a space: it goes through eval, and a Proton build
+# lives in "Proton - Experimental"
+mkdir -p "$tmp/two words"; cp "$tmp/fakewine" "$tmp/two words/wine"
+mkdir -p "$tmp/sp.pc"; cp "$here/play.sh" "$tmp/sp.pc/"
+printf 'CMD=game.exe\n' > "$tmp/sp.pc/autorun.cmd"
+eq wine-space "$(WINE="$tmp/two words/wine" WINE_GAMES="$tmp/cache" GOG2LINUX_INHIBIT=no \
+                 "$tmp/sp.pc/play.sh")" "$tmp/sp.pc|$tmp/sp.pc/.prefix||game.exe"
+
 # native .sh without the execute bit: recover instead of dying with rc=126
 mkdir -p "$tmp/nx.pc/lib/py2-linux-x86_64"; cp "$here/play.sh" "$tmp/nx.pc/"
 printf 'CMD=game.exe\n' > "$tmp/nx.pc/autorun.cmd"
