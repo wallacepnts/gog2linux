@@ -96,8 +96,8 @@ disguise, it stops before that and says which system to use.
    every GOG installer offers a list, but that list is usually its *own*
    interface — the game carries every language inside and picks at run time.
    `build.sh` compares what comes out with and without a language filter (a
-   header read, milliseconds) and, when it is the same, says so and extracts the
-   lot. Where the files really do differ it lists them and waits; Enter takes
+   header read, milliseconds) and, when it is the same, extracts the lot without
+   asking. Where the files really do differ it lists them and waits; Enter takes
    English, and the choice carries to the DLCs in the same run. In a script,
    `--lang it-IT` or `--lang all`.
 

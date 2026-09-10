@@ -64,7 +64,6 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_ASK_LANG="Idioma [%s]: "
     M_LANG="idioma: %s (%s)\n"
     M_ONLY_LANG="idioma: %s (%s) - o unico que este instalador traz\n"
-    M_SAME_LANG="idioma: os %s que este instalador oferece nao mudam nenhum arquivo\n  (e a interface dele, nao o jogo - a GOG poe todos os idiomas dentro)\n"
     M_META="nao consegui ler os metadados da GOG (veja o erro do python acima)"
     M_NO_EXE="nao achei o executavel do jogo em %s\n"
     M_WORKDIR="obs: o jogo roda de dentro de %s/ - e o que a GOG pede\n"
@@ -132,7 +131,6 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_ASK_LANG="Language [%s]: "
     M_LANG="language: %s (%s)\n"
     M_ONLY_LANG="language: %s (%s) - the only one this installer carries\n"
-    M_SAME_LANG="language: the %s this installer offers change no files\n  (that is its own UI, not the game - GOG puts every language inside)\n"
     M_META="could not read the GOG metadata (see the python error above)"
     M_NO_EXE="could not find the game executable in %s\n"
     M_WORKDIR="note: the game runs from inside %s/ - which is what GOG asks for\n"
@@ -405,8 +403,8 @@ if [ $# -gt 0 ]; then
           *) pick=$(printf '%s\n' "$offered" | sed -n "${answer}p" | cut -f1) ;;
         esac
       elif [ "$count" -gt 1 ]; then
-        # nothing to choose: extract the lot, and say why there was no question
-        printf "$M_SAME_LANG" "$count"
+        # the languages are the installer's own interface: nothing to choose,
+        # nothing worth saying. Extract the lot.
         pick=
       fi
       # chosen once, reused for the DLCs that follow

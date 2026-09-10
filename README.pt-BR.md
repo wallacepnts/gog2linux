@@ -94,7 +94,7 @@ qual sistema usar.
    instalador GOG oferece uma lista, mas ela costuma ser a interface *dele* — o
    jogo traz todos os idiomas dentro e escolhe na hora de rodar. O `build.sh`
    compara o que sai com e sem filtro de idioma (é leitura de cabeçalho, custa
-   milissegundos) e, se der no mesmo, diz isso e extrai tudo. Quando os arquivos
+   milissegundos) e, se der no mesmo, extrai tudo sem perguntar. Quando os arquivos
    realmente mudam, aí ele lista e espera; Enter aceita inglês, e a escolha vale
    pras DLCs da mesma execução. Em script, `--lang it-IT` ou `--lang all`.
 
