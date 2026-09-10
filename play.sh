@@ -181,7 +181,7 @@ fi
 # it stretched by whoever composites -- which is not antialiasing wearing off,
 # it is resampling. Asking for the screen's own mode removes the step entirely.
 # GOG2LINUX_SCREEN=1280x720 pins a size, GOG2LINUX_SCREEN=no leaves it alone.
-if [ "$SCREEN" = native ] && [ -z "$override" ] && [ "${GOG2LINUX_SCREEN:-}" != no ]; then
+if [ -n "$SCREEN" ] && [ -z "$override" ] && [ "${GOG2LINUX_SCREEN:-}" != no ]; then
   mode=${GOG2LINUX_SCREEN:-}
   if [ -z "$mode" ]; then
     # first line of a connected output's mode list is the one it prefers; a
@@ -191,8 +191,13 @@ if [ "$SCREEN" = native ] && [ -z "$override" ] && [ "${GOG2LINUX_SCREEN:-}" != 
       case "$mode" in [0-9]*x[0-9]*) break ;; *) mode= ;; esac
     done
   fi
-  case "$mode" in
-    [0-9]*x[0-9]*) CMD="$CMD -screen-width ${mode%x*} -screen-height ${mode#*x} -screen-fullscreen 1" ;;
+  # each engine spells it its own way; "native" is what build.sh wrote before
+  # it started naming the engine, and meant Unity
+  case "$mode:$SCREEN" in
+    [0-9]*x[0-9]*:unity|[0-9]*x[0-9]*:native)
+      CMD="$CMD -screen-width ${mode%%x*} -screen-height ${mode#*x} -screen-fullscreen 1" ;;
+    [0-9]*x[0-9]*:unreal)
+      CMD="$CMD -ResX=${mode%%x*} -ResY=${mode#*x} -fullscreen" ;;
   esac
 fi
 

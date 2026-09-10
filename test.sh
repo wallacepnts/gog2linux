@@ -290,7 +290,7 @@ touch "$tmp/unity.pc/Game.exe" "$tmp/unity.pc/UnityPlayer.dll"
 touch "$tmp/unity.pc/Game_Data/StreamingAssets/intro.mp4"
 has unity "$("$here/build.sh" "$tmp/unity.pc")" "asking for DXVK"
 has unity-env "$(cat "$tmp/unity.pc/autorun.cmd")" 'ENV=WINEDLLOVERRIDES="d3d11,dxgi=n,b"'
-has unity-screen "$(cat "$tmp/unity.pc/autorun.cmd")" 'SCREEN=native'
+has unity-screen "$(cat "$tmp/unity.pc/autorun.cmd")" 'SCREEN=unity'
 
 # a .webm cutscene is VP8, which Unity decodes on its own: nothing to override
 mkdir -p "$tmp/webm.pc/Game_Data/StreamingAssets"
@@ -544,6 +544,25 @@ eq launch-forced "$(FORCE_WINE=1 run "$tmp/lp.pc/play.sh")" \
                  "$tmp/lp.pc|$tmp/lp.pc/.prefix||game.exe"
 eq launch-override "$(run "$tmp/lp.pc/play.sh" "$tmp/lp.pc" "Editor.exe")" \
                    "$tmp/lp.pc|$tmp/lp.pc/.prefix||Editor.exe"
+
+# an Unreal game lives under <Name>/Binaries/Win64 and spells the resolution
+# its own way; left alone it picks 16:9 and lets the compositor stretch it
+mkdir -p "$tmp/ue.pc/Game/Binaries/Win64"
+touch "$tmp/ue.pc/Game/Binaries/Win64/Game-Win64-Shipping.exe"
+printf '{"playTasks":[{"category":"game","path":"Game/Binaries/Win64/Game-Win64-Shipping.exe"}]}' \
+  > "$tmp/ue.pc/goggame-1.info"
+"$here/build.sh" "$tmp/ue.pc" >/dev/null
+has unreal-screen "$(cat "$tmp/ue.pc/autorun.cmd")" 'SCREEN=unreal'
+mkdir -p "$tmp/ue2.pc"; cp "$here/play.sh" "$tmp/ue2.pc/"
+printf 'SCREEN=unreal\nCMD=game.exe\n' > "$tmp/ue2.pc/autorun.cmd"
+eq unreal-args "$(GOG2LINUX_SCREEN=1280x720 run "$tmp/ue2.pc/play.sh")" \
+               "$tmp/ue2.pc|$tmp/ue2.pc/.prefix||game.exe -ResX=1280 -ResY=720 -fullscreen"
+
+# SCREEN=native is what build.sh wrote before it named the engine: still Unity
+mkdir -p "$tmp/old.pc"; cp "$here/play.sh" "$tmp/old.pc/"
+printf 'SCREEN=native\nCMD=game.exe\n' > "$tmp/old.pc/autorun.cmd"
+eq screen-legacy "$(GOG2LINUX_SCREEN=1280x720 run "$tmp/old.pc/play.sh")" \
+                 "$tmp/old.pc|$tmp/old.pc/.prefix||game.exe -screen-width 1280 -screen-height 720 -screen-fullscreen 1"
 
 # SCREEN=native: play.sh asks Unity for the screen's own mode, so nothing has to
 # stretch a 16:9 picture onto a 16:10 panel
