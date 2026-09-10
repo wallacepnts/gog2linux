@@ -88,7 +88,11 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_OTHERS2="  se o jogo nao abrir, tente uma delas no autorun.cmd"
     M_NATIVE="obs: tem build Linux nativo aqui -> ./%s/%s (sem wine)\n"
     M_LOVE="obs: jogo LOVE (%s) - launch.sh escrito, o play.sh roda pelo motor nativo\n"
-    M_LOVE_GET="  falta o motor: instale o pacote love, ou flatpak install flathub org.love2d.love2d"
+    M_PENDING="\nfalta no sistema, pra este jogo rodar:\n"
+    M_NEED_LOVE="  o motor LOVE: pacote love, ou flatpak install flathub org.love2d.love2d\n"
+    M_NEED_DXVK="  DXVK: pacote dxvk - sem ele a animacao fica preta\n"
+    M_NEED_GST32="  plugins gstreamer de 32 bits: gstreamer-plugins-libav-32bit,\n    -good-32bit, -ugly-32bit - sem eles o audio comprimido derruba o jogo\n"
+    M_NEED_WINE="  wine: so pra jogar, empacotar nao precisa\n"
     M_ASK_MENU='Adicionar "%s" ao menu de jogos? [s/N] '
     M_YES="sSyY"
     M_ENTRY="entrada de menu: %s\n"
@@ -150,7 +154,11 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_OTHERS2="  if the game won't start, try one of those in autorun.cmd"
     M_NATIVE="note: native Linux build here -> ./%s/%s (no wine)\n"
     M_LOVE="note: LOVE game (%s) - launch.sh written, play.sh runs the native engine\n"
-    M_LOVE_GET="  the engine is missing: install the love package, or flatpak install flathub org.love2d.love2d"
+    M_PENDING="\nmissing on this system, for this game to run:\n"
+    M_NEED_LOVE="  the LOVE engine: the love package, or flatpak install flathub org.love2d.love2d\n"
+    M_NEED_DXVK="  DXVK: the dxvk package - without it the cutscenes play black\n"
+    M_NEED_GST32="  32-bit gstreamer plugins: gstreamer-plugins-libav-32bit,\n    -good-32bit, -ugly-32bit - without them compressed audio takes the game down\n"
+    M_NEED_WINE="  wine: only needed to play, not to package\n"
     M_ASK_MENU='Add "%s" to the desktop games menu? [y/N] '
     M_YES="yY"
     M_ENTRY="menu entry: %s\n"
@@ -175,6 +183,7 @@ esac
 
 desktop=ask
 lang=auto
+missing=      # what the host still needs for this game; reported at the end
 flags=()   # kept verbatim: the install/ pass below re-runs this script per game
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -306,8 +315,8 @@ staging=
 if [ $# -eq 0 ] && [ -d "$target" ]; then
   case "$target" in
     *.pc) ;;
-    *) pending=("$target"/setup_*.exe "$target"/*/setup_*.exe)
-       if [ ${#pending[@]} -gt 0 ]; then
+    *) installers=("$target"/setup_*.exe "$target"/*/setup_*.exe)
+       if [ ${#installers[@]} -gt 0 ]; then
          staging=$target
          target=$target.pc
          printf "$M_STAGING" "$staging" "$target"
@@ -956,8 +965,52 @@ PYLOVE
     } > "$target/launch.sh"
     chmod +x "$target/launch.sh"
     printf "$M_LOVE" "$lovegame"
-    command -v love >/dev/null || command -v flatpak >/dev/null || echo "$M_LOVE_GET"
+    command -v love >/dev/null || command -v flatpak >/dev/null ||
+      missing="$missing$M_NEED_LOVE"
   fi
+fi
+
+# What this machine still lacks for this particular game. Said once, at the end,
+# with the package names -- finding out from a crash dump costs an evening.
+if [ -n "$unity_mf" ]; then
+  have=
+  for dxvk in /usr/libexec/dxvk/lib64 /usr/share/dxvk/x64 /usr/lib/dxvk/x64 /opt/dxvk/x64; do
+    [ -f "$dxvk/d3d11.dll" ] && have=yes && break
+  done
+  [ -n "$have" ] || missing="$missing$M_NEED_DXVK"
+fi
+
+# A 32-bit game decodes its compressed audio and video through the 32-bit
+# GStreamer, which is a separate install from the 64-bit one and easy to miss:
+# the core alone loads happily and then decodes nothing.
+# the parentheses matter: -o binds looser than the implied -a, so without them
+# -print would only ever apply to the last name in the list
+if [ -n "$(find "$target" \( -iname '*.xwb' -o -iname '*.wma' -o -iname '*.wmv' \
+                -o -iname '*.asf' \) -print -quit 2>/dev/null)" ] &&
+   [ "$(python3 - "$target/${exe//\"/}" <<'PYBITS'
+import struct, sys
+try:
+    with open(sys.argv[1], 'rb') as fh:
+        fh.seek(0x3c)
+        fh.seek(struct.unpack('<I', fh.read(4))[0] + 4)
+        print(32 if struct.unpack('<H', fh.read(2))[0] == 0x14c else 64)
+except Exception:
+    print('')
+PYBITS
+)" = 32 ]; then
+  have=
+  for gst in ${GOG2LINUX_GST32:-/usr/lib/gstreamer-1.0 /usr/lib32/gstreamer-1.0 \
+             /usr/lib/i386-linux-gnu/gstreamer-1.0}; do
+    [ -f "$gst/libgstlibav.so" ] && have=yes && break
+  done
+  [ -n "$have" ] || missing="$missing$M_NEED_GST32"
+fi
+
+command -v wine >/dev/null 2>&1 || missing="$missing$M_NEED_WINE"
+
+if [ -n "$missing" ]; then
+  printf "$M_PENDING"
+  printf '%b' "$missing"   # the messages carry their own newlines
 fi
 
 # A .desktop entry is all KDE, GNOME and XFCE need; no per-desktop code.

@@ -176,6 +176,11 @@ does not carry.
 | black screen / freezing on Batocera | no DXVK | turn on `windows.dxvk` in the game's advanced options — **only applies before the first boot**, otherwise delete the prefix in `/userdata/saves/windows/` |
 | cutscene plays black, sound and timing fine | Unity hands the decoded frame over through `dxgi`, which wine leaves stubbed | DXVK in the prefix (just below) |
 | the game demands a real install (registry, DirectX) | it isn't portable | install it into a prefix with wine and package that as `.wtgz` (see below) |
+| a 32-bit game dies the moment it plays a sound | the 32-bit gstreamer plugins are missing | `gstreamer-plugins-{libav,good,ugly}-32bit` — the 32-bit core loads happily and decodes nothing |
+
+At the end of every packaging run `build.sh` says what **this system** still
+lacks for **that game** — DXVK, the LÖVE engine, the 32-bit plugins, wine itself
+— by package name. Finding that out from a crash dump costs an evening.
 
 This one is automatic. `build.sh` spots a Unity game (`UnityPlayer.dll`) with an
 `.mp4` cutscene and writes `ENV=WINEDLLOVERRIDES="d3d11,dxgi=n,b"` into its

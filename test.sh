@@ -249,6 +249,30 @@ touch "$tmp/webm.pc/Game_Data/StreamingAssets/intro.webm"
 [ -z "$(grep -c 'dxgi' "$tmp/webm.pc/autorun.cmd" | grep -v '^0$')" ] ||
   { echo "FAILED: asked for DXVK with no .mp4 in sight"; exit 1; }
 
+# what the host still lacks is said at the end, with package names: a 32-bit
+# game with compressed audio decodes it through a 32-bit GStreamer, which is a
+# separate install and whose absence only shows up as a crash dump
+mkdir -p "$tmp/gst.pc/Content"
+printf 'MZ' > "$tmp/gst.pc/Game.exe"          # PE header, i386
+printf '\x80\x00\x00\x00' | dd of="$tmp/gst.pc/Game.exe" bs=1 seek=60 conv=notrunc 2>/dev/null
+printf 'PE\0\0\x4c\x01' | dd of="$tmp/gst.pc/Game.exe" bs=1 seek=128 conv=notrunc 2>/dev/null
+touch "$tmp/gst.pc/Content/sound.xwb"
+out=$(GOG2LINUX_GST32=none "$here/build.sh" "$tmp/gst.pc" 2>&1)
+case "$out" in
+  *"32-bit gstreamer"*) ;;
+  *) echo "FAILED: said nothing about the missing 32-bit plugins"; echo "$out"; exit 1 ;;
+esac
+
+# a 64-bit game has nothing to do with them, and is not told to install anything
+mkdir -p "$tmp/gst64.pc/Content"
+printf 'MZ' > "$tmp/gst64.pc/Game.exe"
+printf '\x80\x00\x00\x00' | dd of="$tmp/gst64.pc/Game.exe" bs=1 seek=60 conv=notrunc 2>/dev/null
+printf 'PE\0\0\x64\x86' | dd of="$tmp/gst64.pc/Game.exe" bs=1 seek=128 conv=notrunc 2>/dev/null
+touch "$tmp/gst64.pc/Content/sound.xwb"
+case "$(GOG2LINUX_GST32=none "$here/build.sh" "$tmp/gst64.pc" 2>&1)" in
+  *"32-bit gstreamer"*) echo "FAILED: asked a 64-bit game for 32-bit plugins"; exit 1 ;;
+esac
+
 # --desktop writes a freedesktop entry, with the GOG icon when there is one
 # the wrapper scan must not clobber the game name used by the menu entry
 mkdir -p "$tmp/menu.pc"; touch "$tmp/menu.pc/Game.exe" "$tmp/menu.pc/ddraw.dll"

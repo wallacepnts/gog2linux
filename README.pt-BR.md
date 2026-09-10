@@ -172,6 +172,12 @@ mesmo (o sistema `windows` não roda binário Linux).
 | tela preta / travando no Batocera | falta DXVK | ligue `windows.dxvk` nas opções avançadas do jogo — **só vale antes do 1º boot**, senão apague o prefixo em `/userdata/saves/windows/` |
 | animação em tela preta, som e tempo certos | Unity entrega o quadro decodificado pelo `dxgi`, que o wine deixa como stub | DXVK no prefixo (logo abaixo) |
 | jogo pede instalação de verdade (registro, DirectX) | não é portátil | instale num prefixo com wine e empacote como `.wtgz` (veja abaixo) |
+| jogo de 32 bits fecha ao tocar som | faltam os plugins gstreamer de 32 bits | `gstreamer-plugins-{libav,good,ugly}-32bit` — o núcleo de 32 bits carrega sozinho e não decodifica nada |
+
+No fim de cada empacotamento o `build.sh` diz o que **este sistema** ainda não
+tem para **aquele jogo** — DXVK, o motor LÖVE, os plugins de 32 bits, o próprio
+wine — com o nome dos pacotes. Descobrir isso por um dump de erro custa uma
+noite.
 
 Esse caso é automático. O `build.sh` reconhece jogo Unity (`UnityPlayer.dll`)
 com animação em `.mp4` e escreve `ENV=WINEDLLOVERRIDES="d3d11,dxgi=n,b"` no
