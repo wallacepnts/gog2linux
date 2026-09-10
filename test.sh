@@ -13,6 +13,22 @@ chmod +x "$tmp/fakewine"
 
 # the real systemd-inhibit would wrap every launch below; the one test that
 # cares brings its own
+# a PE header just complete enough for build.sh: machine at e_lfanew+4 tells
+# 32 from 64 bits, subsystem at e_lfanew+0x5c tells console (3) from GUI (2)
+fake_pe() {
+  python3 -c "
+import struct, sys
+path, bits, sub = sys.argv[1], sys.argv[2], sys.argv[3]
+d = bytearray(256)
+d[0:2] = b'MZ'
+d[0x3c:0x40] = struct.pack('<I', 0x80)
+d[0x80:0x84] = b'PE\\0\\0'
+d[0x84:0x86] = struct.pack('<H', 0x14c if bits == '32' else 0x8664)
+d[0xdc:0xde] = struct.pack('<H', 3 if sub == 'console' else 2)
+open(path, 'wb').write(bytes(d))
+" "$1" "$2" "$3"
+}
+
 run() { WINE="$tmp/fakewine" WINE_GAMES="$tmp/cache" GOG2LINUX_INHIBIT=no "$@"; }
 eq()  { [ "$2" = "$3" ] || { echo "FAILED $1:"; echo "  got:      $2"; echo "  expected: $3"; exit 1; }; }
 has() { case "$2" in *"$3"*) ;; *) echo "FAILED $1:"; echo "  output:   $2"; echo "  should contain: $3"; exit 1 ;; esac; }
@@ -242,6 +258,25 @@ rm -rf "$tmp/reg.pc/.prefix"
 esc=$(printf '%s' "$tmp/reg.pc" | sed 's|/|\\\\|g')
 has reg-path "$(WINE="$tmp/dumpwine" "$tmp/reg.pc/play.sh" 2>/dev/null)" "\"InstallPath\"=\"Z:$esc\""
 
+# a console-subsystem game sets its console title on the first line of Main;
+# launched from the menu without a terminal, .NET throws before the window opens
+mkdir -p "$tmp/con.pc"; fake_pe "$tmp/con.pc/Game.exe" 64 console
+XDG_DATA_HOME="$tmp/xdg" "$here/build.sh" --desktop "$tmp/con.pc" >/dev/null
+has console-term "$(cat "$tmp/xdg/applications/gog-con.desktop")" "Terminal=true"
+
+# a normal windowed game must not drag a terminal along with it
+mkdir -p "$tmp/gui.pc"; fake_pe "$tmp/gui.pc/Game.exe" 64 gui
+XDG_DATA_HOME="$tmp/xdg" "$here/build.sh" --desktop "$tmp/gui.pc" >/dev/null
+has gui-term "$(cat "$tmp/xdg/applications/gog-gui.desktop")" "Terminal=false"
+
+# the name comes from the base game, not from a DLC whose .info sorts first
+mkdir -p "$tmp/dlc.pc"; touch "$tmp/dlc.pc/Game.exe"
+printf '{"name":"Extra Pack","gameId":"111","rootGameId":"999"}' > "$tmp/dlc.pc/goggame-111.info"
+printf '{"name":"Real Game","gameId":"999","rootGameId":"999","playTasks":[{"category":"game","path":"Game.exe"}]}' \
+  > "$tmp/dlc.pc/goggame-999.info"
+XDG_DATA_HOME="$tmp/xdg" "$here/build.sh" --desktop "$tmp/dlc.pc" >/dev/null
+has dlc-name "$(cat "$tmp/xdg/applications/gog-dlc.desktop")" "Name=Real Game"
+
 # a Unity game with .mp4 cutscenes asks for DXVK: wine's own dxgi stubs the call
 # that hands the decoded frame over, and the video plays black
 mkdir -p "$tmp/unity.pc/Game_Data/StreamingAssets"
@@ -263,9 +298,7 @@ touch "$tmp/webm.pc/Game_Data/StreamingAssets/intro.webm"
 # game with compressed audio decodes it through a 32-bit GStreamer, which is a
 # separate install and whose absence only shows up as a crash dump
 mkdir -p "$tmp/gst.pc/Content"
-printf 'MZ' > "$tmp/gst.pc/Game.exe"          # PE header, i386
-printf '\x80\x00\x00\x00' | dd of="$tmp/gst.pc/Game.exe" bs=1 seek=60 conv=notrunc 2>/dev/null
-printf 'PE\0\0\x4c\x01' | dd of="$tmp/gst.pc/Game.exe" bs=1 seek=128 conv=notrunc 2>/dev/null
+fake_pe "$tmp/gst.pc/Game.exe" 32 gui
 touch "$tmp/gst.pc/Content/sound.xwb"
 out=$(GOG2LINUX_GST32=none "$here/build.sh" "$tmp/gst.pc" 2>&1)
 case "$out" in
@@ -275,9 +308,7 @@ esac
 
 # a 64-bit game has nothing to do with them, and is not told to install anything
 mkdir -p "$tmp/gst64.pc/Content"
-printf 'MZ' > "$tmp/gst64.pc/Game.exe"
-printf '\x80\x00\x00\x00' | dd of="$tmp/gst64.pc/Game.exe" bs=1 seek=60 conv=notrunc 2>/dev/null
-printf 'PE\0\0\x64\x86' | dd of="$tmp/gst64.pc/Game.exe" bs=1 seek=128 conv=notrunc 2>/dev/null
+fake_pe "$tmp/gst64.pc/Game.exe" 64 gui
 touch "$tmp/gst64.pc/Content/sound.xwb"
 case "$(GOG2LINUX_GST32=none "$here/build.sh" "$tmp/gst64.pc" 2>&1)" in
   *"32-bit gstreamer"*) echo "FAILED: asked a 64-bit game for 32-bit plugins"; exit 1 ;;

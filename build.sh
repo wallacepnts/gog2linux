@@ -473,9 +473,14 @@ def load(pattern):
             pass
 
 
-tasks, langs, name = [], {'*'}, ''
+tasks, langs, name, base = [], {'*'}, '', ''
 for d in load('goggame-*.info'):
-    name = name or (d.get('name') or '')
+    title = d.get('name') or ''
+    # a DLC ships its own .info, and sorting by filename can put it first --
+    # only the base game has gameId == rootGameId
+    if title and d.get('gameId') and d.get('gameId') == d.get('rootGameId'):
+        base = base or title
+    name = name or title
     langs |= {str(x).lower() for x in (d.get('languages') or [])}
     for t in d.get('playTasks') or []:
         path = (t.get('path') or '').replace('\\', '/')
@@ -570,7 +575,7 @@ write_reg(once, 'gog-registry-once.reg')
 
 print(chosen)
 print(';'.join(sorted({p for _, _, p, _ in tasks if p != chosen})))
-print(name)
+print(base or name)
 print(chosen_dir)
 PYMETA
 ) || die "$M_META"
@@ -637,6 +642,25 @@ fi
 if [ -z "$exe" ] || [ ! -e "$target/$exe" ]; then
   die "$(printf "$M_NO_EXE" "$target")"
 fi
+# A console-subsystem game asks the console for things -- Streets of Rage 4
+# sets its title on the first line of Main -- and without one .NET throws
+# IOException before the window ever opens. The menu entry has to say so.
+read -r exe_bits exe_console <<< "$(python3 - "$target/$exe" <<'PYPE'
+import struct, sys
+try:
+    with open(sys.argv[1], 'rb') as fh:
+        fh.seek(0x3c)
+        head = struct.unpack('<I', fh.read(4))[0]
+        fh.seek(head + 4)
+        machine = struct.unpack('<H', fh.read(2))[0]
+        fh.seek(head + 0x5c)
+        subsystem = struct.unpack('<H', fh.read(2))[0]
+    print(32 if machine == 0x14c else 64, 'true' if subsystem == 3 else 'false')
+except Exception:
+    print('? false')
+PYPE
+)"
+
 # play.sh cds into DIR and runs CMD from there, so the two have to agree. Only
 # worth it when the executable lives inside the working directory -- anywhere
 # else and the relative path back out costs more than it buys.
@@ -1027,17 +1051,7 @@ fi
 # -print would only ever apply to the last name in the list
 if [ -n "$(find "$target" \( -iname '*.xwb' -o -iname '*.wma' -o -iname '*.wmv' \
                 -o -iname '*.asf' \) -print -quit 2>/dev/null)" ] &&
-   [ "$(python3 - "$target/${exe//\"/}" <<'PYBITS'
-import struct, sys
-try:
-    with open(sys.argv[1], 'rb') as fh:
-        fh.seek(0x3c)
-        fh.seek(struct.unpack('<I', fh.read(4))[0] + 4)
-        print(32 if struct.unpack('<H', fh.read(2))[0] == 0x14c else 64)
-except Exception:
-    print('')
-PYBITS
-)" = 32 ]; then
+   [ "$exe_bits" = 32 ]; then
   have=
   for gst in ${GOG2LINUX_GST32:-/usr/lib/gstreamer-1.0 /usr/lib32/gstreamer-1.0 \
              /usr/lib/i386-linux-gnu/gstreamer-1.0}; do
@@ -1117,7 +1131,7 @@ PYICON
     echo "Path=$target"
     [ -n "$icon" ] && echo "Icon=$icon"
     echo "Categories=Game;"
-    echo "Terminal=false"
+    echo "Terminal=$exe_console"
   } > "$entry"
   chmod +x "$entry"
 
