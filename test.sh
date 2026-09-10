@@ -11,7 +11,9 @@ tmp=$(mktemp -d); tmp=$(cd "$tmp" && pwd -P); trap 'rm -rf "$tmp"' EXIT
 printf '#!/bin/sh\necho "$PWD|$WINEPREFIX|$WINEDLLOVERRIDES|$*"\n' > "$tmp/fakewine"
 chmod +x "$tmp/fakewine"
 
-run() { WINE="$tmp/fakewine" WINE_GAMES="$tmp/cache" "$@"; }
+# the real systemd-inhibit would wrap every launch below; the one test that
+# cares brings its own
+run() { WINE="$tmp/fakewine" WINE_GAMES="$tmp/cache" GOG2LINUX_INHIBIT=no "$@"; }
 eq()  { [ "$2" = "$3" ] || { echo "FAILED $1:"; echo "  got:      $2"; echo "  expected: $3"; exit 1; }; }
 has() { case "$2" in *"$3"*) ;; *) echo "FAILED $1:"; echo "  output:   $2"; echo "  should contain: $3"; exit 1 ;; esac; }
 
@@ -437,6 +439,20 @@ eq screen-off "$(GOG2LINUX_SCREEN=no run "$tmp/sc.pc/play.sh")" \
 # asking for a specific executable is asking for that and nothing else
 eq screen-override "$(GOG2LINUX_SCREEN=1280x720 run "$tmp/sc.pc/play.sh" "$tmp/sc.pc" "Editor.exe")" \
                    "$tmp/sc.pc|$tmp/sc.pc/.prefix||Editor.exe"
+
+# a wine game keeps the machine awake: it speaks no idle-inhibit protocol of its
+# own, so the desktop would suspend mid-level
+mkdir -p "$tmp/bin" "$tmp/aw.pc"; cp "$here/play.sh" "$tmp/aw.pc/"
+printf 'CMD=game.exe\n' > "$tmp/aw.pc/autorun.cmd"
+printf '#!/bin/sh\necho "held: $1 $2"\nshift 3\nexec "$@"\n' > "$tmp/bin/systemd-inhibit"
+chmod +x "$tmp/bin/systemd-inhibit"
+awake=$(PATH="$tmp/bin:$PATH" WINE="$tmp/fakewine" "$tmp/aw.pc/play.sh")
+has inhibit "$awake" "held: --what=idle --who=gog2linux"
+has inhibit-cmd "$awake" "$tmp/aw.pc|$tmp/aw.pc/.prefix||game.exe"
+
+# and it can be turned off, for a machine that would rather sleep
+eq inhibit-off "$(PATH="$tmp/bin:$PATH" WINE="$tmp/fakewine" GOG2LINUX_INHIBIT=no \
+                  "$tmp/aw.pc/play.sh")" "$tmp/aw.pc|$tmp/aw.pc/.prefix||game.exe"
 
 # native .sh without the execute bit: recover instead of dying with rc=126
 mkdir -p "$tmp/nx.pc/lib/py2-linux-x86_64"; cp "$here/play.sh" "$tmp/nx.pc/"

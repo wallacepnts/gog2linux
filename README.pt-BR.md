@@ -457,4 +457,12 @@ O `play.sh` aceita um segundo argumento opcional que sobrescreve o `CMD`.
 
 Variáveis que ele respeita: `WINE` (binário), `WINEPREFIX`, `WINEARCH`,
 `FORCE_WINE=1` (ignora build nativo),
-`WINE_GAMES` (onde extrair arquivo único).
+`WINE_GAMES` (onde extrair arquivo único),
+`GOG2LINUX_INHIBIT=no` (deixa a máquina dormir durante o jogo).
+
+Por padrão o `play.sh` roda o wine dentro de um `systemd-inhibit --what=idle`.
+Jogo no wine não mexe no protetor de tela nem fala o protocolo de ociosidade,
+então sem isso o contador do desktop continua correndo e a máquina entra em
+espera no meio da partida. A trava dura só enquanto o jogo roda. Jogo nativo
+passa pelo SDL, que já faz isso sozinho; sem systemd, como no Batocera, não há o
+que travar.

@@ -209,11 +209,22 @@ esac
 
 cd "$target/$DIR"
 
+# A wine game never tells the desktop it is busy: it does not touch the X
+# screensaver and speaks no idle-inhibit protocol, so the countdown keeps
+# running and the machine suspends in the middle of a level. This holds it off
+# for exactly as long as the game runs, and lets go on its own. Native games go
+# through SDL, which already does this. No systemd (Batocera): nothing to hold.
+inhibit=
+if [ "${GOG2LINUX_INHIBIT:-}" != no ] && command -v systemd-inhibit >/dev/null 2>&1; then
+  inhibit=$(printf '%q ' systemd-inhibit --what=idle --who=gog2linux \
+                         --why="${target##*/}")
+fi
+
 # Old games ask for a 640x480 fullscreen mode wine cannot really set, so they
 # paint a small picture in the corner of a big black window. Wrapping them in a
 # virtual desktop of that exact size gives an honest window instead.
 if [ -n "${WINE_DESKTOP:-}" ]; then
-  eval exec "${WINE:-wine}" explorer "/desktop=${target##*/},$WINE_DESKTOP" "$CMD"
+  eval exec $inhibit "${WINE:-wine}" explorer "/desktop=${target##*/},$WINE_DESKTOP" "$CMD"
 fi
 
-eval exec "${WINE:-wine}" "$CMD"   # eval because CMD carries quotes and arguments
+eval exec $inhibit "${WINE:-wine}" "$CMD"   # eval because CMD carries quotes and arguments

@@ -461,4 +461,11 @@ Worth it when home is a small partition: one GOG game passes 20 GB easily.
 
 Variables it honours: `WINE` (binary), `WINEPREFIX`, `WINEARCH`,
 `FORCE_WINE=1` (ignore the native build),
-`WINE_GAMES` (where single-file games get extracted).
+`WINE_GAMES` (where single-file games get extracted),
+`GOG2LINUX_INHIBIT=no` (let the machine sleep while playing).
+
+By default `play.sh` runs wine inside `systemd-inhibit --what=idle`. A wine game
+touches neither the screensaver nor the idle-inhibit protocol, so without this
+the desktop keeps counting down and suspends in the middle of a level. The hold
+lasts exactly as long as the game. Native games go through SDL, which already
+does it; with no systemd, as on Batocera, there is nothing to hold.

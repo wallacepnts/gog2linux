@@ -34,6 +34,15 @@ lang_name() {
   esac
 }
 
+# innoextract hands over the installer's own label when the installer carries one
+# ("brazilian: Portugues (Brasil)"); the table above is for the newer ones, which
+# only give a code. $offered is set right before this is ever called.
+lang_show() {
+  local label
+  label=$(printf '%s\n' "${offered:-}" | awk -F'\t' -v c="$1" '$1 == c {print $2; exit}')
+  printf '%s' "${label:-$(lang_name "$1")}"
+}
+
 # Messages in the two languages this is used in. Picked from $LANG; force with
 # GOG2LINUX_LANG=pt or =en. No gettext, no .po files, no runtime dependency.
 case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
@@ -337,25 +346,30 @@ if [ $# -gt 0 ]; then
     # one wins the metadata -- which is how an English game ends up Italian.
     pick=$lang
     if [ "$lang" = auto ]; then
-      offered=$(innoextract --list-languages "$setup" 2>/dev/null | awk '/^ - /{print $2}') || true
-      pick=$(printf '%s\n' "$offered" | awk '/^en/{print; exit}')
+      # two shapes in the wild: " - en-US" from a recent installer, and
+      # " - brazilian: Portugues (Brasil)" from an old one. Splitting on the
+      # colon keeps the code clean -- passing "brazilian:" to --language, and
+      # printing it as the language name, is what happens without this.
+      offered=$(innoextract --list-languages "$setup" 2>/dev/null |
+                sed -n 's/^ - \([^ :]*\):\{0,1\} *\(.*\)$/\1\t\2/p') || true
+      pick=$(printf '%s\n' "$offered" | awk -F'\t' '/^en/{print $1; exit}')
       count=$(printf '%s\n' "$offered" | grep -c .) || true
 
       # more than one language and someone watching: let them pick
       if [ "$count" -gt 1 ] && [ -t 0 ]; then
         printf "$M_OFFERS" "$(basename "$setup")" "$count"
         i=0
-        while IFS= read -r code; do
+        while IFS=$'\t' read -r code label; do
           [ -n "$code" ] || continue
           i=$((i + 1))
-          printf '  %2d) %-8s %s\n' "$i" "$code" "$(lang_name "$code")"
+          printf '  %2d) %-10s %s\n' "$i" "$code" "${label:-$(lang_name "$code")}"
         done <<< "$offered"
         printf "$M_ASK_LANG" "${pick:-1}"
         read -r answer
         case "$answer" in
           '') ;;
           *[!0-9]*) pick=$answer ;;
-          *) pick=$(printf '%s\n' "$offered" | sed -n "${answer}p") ;;
+          *) pick=$(printf '%s\n' "$offered" | sed -n "${answer}p" | cut -f1) ;;
         esac
       fi
       # chosen once, reused for the DLCs that follow
@@ -365,9 +379,9 @@ if [ $# -gt 0 ]; then
     if [ -n "$pick" ] && [ "$pick" != all ]; then
       opts+=(--language "$pick")
       if [ "${count:-1}" -le 1 ]; then
-        printf "$M_ONLY_LANG" "$pick" "$(lang_name "$pick")"
+        printf "$M_ONLY_LANG" "$pick" "$(lang_show "$pick")"
       else
-        printf "$M_LANG" "$pick" "$(lang_name "$pick")"
+        printf "$M_LANG" "$pick" "$(lang_show "$pick")"
       fi
     fi
     if ! innoextract --gog --silent --collisions=overwrite "${opts[@]}" -d "$target" "$setup"; then
