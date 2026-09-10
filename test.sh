@@ -283,6 +283,19 @@ printf '{"name":"Real Game","gameId":"999","rootGameId":"999","playTasks":[{"cat
 XDG_DATA_HOME="$tmp/xdg" "$here/build.sh" --desktop "$tmp/dlc.pc" >/dev/null
 has dlc-name "$(cat "$tmp/xdg/applications/gog-dlc.desktop")" "Name=Real Game"
 
+# GOG puts its wrappers next to the executable, and with a workingDir that is
+# not the root of the .pc: the override has to name them anyway, once each
+mkdir -p "$tmp/wrapdir.pc/bin"
+touch "$tmp/wrapdir.pc/bin/game.exe" "$tmp/wrapdir.pc/bin/xinput1_3.dll" "$tmp/wrapdir.pc/dsound.dll"
+touch "$tmp/wrapdir.pc/bin/dsound.dll"          # o mesmo nos dois lugares
+printf '{"playTasks":[{"category":"game","path":"bin/game.exe","workingDir":"bin/"}]}' \
+  > "$tmp/wrapdir.pc/goggame-1.info"
+"$here/build.sh" "$tmp/wrapdir.pc" >/dev/null
+env_line=$(grep '^ENV=' "$tmp/wrapdir.pc/autorun.cmd")
+has wrap-deep "$env_line" "xinput1_3"
+has wrap-root "$env_line" "dsound"
+eq wrap-once "$(printf '%s' "$env_line" | grep -o dsound | wc -l)" "1"
+
 # a Unity game with .mp4 cutscenes asks for DXVK: wine's own dxgi stubs the call
 # that hands the decoded frame over, and the video plays black
 mkdir -p "$tmp/unity.pc/Game_Data/StreamingAssets"

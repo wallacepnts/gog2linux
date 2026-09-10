@@ -683,13 +683,23 @@ case "$exe" in *\ *) exe="\"$exe\"" ;; esac
 # a gamepad dinput. Wine has a hardcoded load order and uses its own, so the
 # wrapper sits there unused and the game renders in a corner. ENV= fixes it on
 # Batocera too, which is why it goes in autorun.cmd rather than play.sh.
+# GOG puts the wrapper next to the executable, which for a game with a working
+# directory is not the root of the .pc -- Trials of Mana keeps its xinput1_3.dll
+# three levels down. Look in both, and do not name the same one twice.
 wrappers=
-for candidate in "$target"/*.dll; do
-  case "${candidate##*/}" in
-    ddraw.dll|d3d8.dll|d3d9.dll|dinput.dll|dinput8.dll|dsound.dll|xinput1_[1-4].dll)
-      dll=${candidate##*/}
-      wrappers="${wrappers:+$wrappers,}${dll%.dll}" ;;
-  esac
+dirs=("$target")
+[ -n "$workdir" ] && dirs+=("$target/$workdir")
+for dir in "${dirs[@]}"; do
+  for candidate in "$dir"/*.dll; do
+    case "${candidate##*/}" in
+      ddraw.dll|d3d8.dll|d3d9.dll|dinput.dll|dinput8.dll|dsound.dll|xinput1_[1-4].dll)
+        dll=${candidate##*/}
+        case ",$wrappers," in
+          *",${dll%.dll},"*) ;;
+          *) wrappers="${wrappers:+$wrappers,}${dll%.dll}" ;;
+        esac ;;
+    esac
+  done
 done
 
 # Unity decodes an .mp4 cutscene through Media Foundation and hands the frame
