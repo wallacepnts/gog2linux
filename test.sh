@@ -84,6 +84,16 @@ has dos "$("$here/build.sh" "$tmp/dos.pc")" "dos game in disguise"
 mkdir -p "$tmp/sv.pc"; touch "$tmp/sv.pc/scummvm.exe"
 has scummvm "$("$here/build.sh" "$tmp/sv.pc")" "scummvm game in disguise"
 
+# a stale app/ from a run that died before the merge is hardlinked to the files
+# at the root; extracting over it would write through to the game. It goes first.
+mkdir -p "$tmp/stale.pc/app"
+printf 'jogo\n' > "$tmp/stale.pc/game.dat"
+ln "$tmp/stale.pc/game.dat" "$tmp/stale.pc/app/game.dat"
+touch "$tmp/stale.pc/setup_x.exe"
+"$here/build.sh" "$tmp/stale.pc" "$tmp/stale.pc/setup_x.exe" >/dev/null 2>&1 || true
+[ ! -d "$tmp/stale.pc/app" ] || { echo "FAILED: kept a stale app/ before extracting"; exit 1; }
+eq stale-intact "$(cat "$tmp/stale.pc/game.dat")" "jogo"
+
 # app/ holding a folder that already exists at the root: mv would fail, must merge
 mkdir -p "$tmp/mix.pc/app/lib" "$tmp/mix.pc/lib"
 touch "$tmp/mix.pc/app/lib/deApp" "$tmp/mix.pc/lib/daRaiz" "$tmp/mix.pc/game.exe"

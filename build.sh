@@ -353,6 +353,12 @@ fi
 
 mkdir -p "$target"
 if [ $# -gt 0 ]; then
+  # The merge below hardlinks app/ onto the root, so a run that died between
+  # extracting and merging leaves app/ pointing at the very files the game now
+  # uses. Extracting over those links writes straight through to the game --
+  # which is how a second run turns "could not open output file" into a folder
+  # that is quietly wrong. app/ is installer scaffolding either way; start clean.
+  rm -rf "$target/app"
   for setup in "$@"; do
     setup=$(readlink -f "$setup")
     # a multi-language installer extracts every language at once, and the last
