@@ -64,6 +64,7 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_ASK_LANG="Idioma [%s]: "
     M_LANG="idioma: %s (%s)\n"
     M_ONLY_LANG="idioma: %s (%s) - o unico que este instalador traz\n"
+    M_SAME_LANG="idioma: os %s que este instalador oferece nao mudam nenhum arquivo\n  (e a interface dele, nao o jogo - a GOG poe todos os idiomas dentro)\n"
     M_META="nao consegui ler os metadados da GOG (veja o erro do python acima)"
     M_NO_EXE="nao achei o executavel do jogo em %s\n"
     M_WORKDIR="obs: o jogo roda de dentro de %s/ - e o que a GOG pede\n"
@@ -130,6 +131,7 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_ASK_LANG="Language [%s]: "
     M_LANG="language: %s (%s)\n"
     M_ONLY_LANG="language: %s (%s) - the only one this installer carries\n"
+    M_SAME_LANG="language: the %s this installer offers change no files\n  (that is its own UI, not the game - GOG puts every language inside)\n"
     M_META="could not read the GOG metadata (see the python error above)"
     M_NO_EXE="could not find the game executable in %s\n"
     M_WORKDIR="note: the game runs from inside %s/ - which is what GOG asks for\n"
@@ -364,8 +366,22 @@ if [ $# -gt 0 ]; then
       pick=$(printf '%s\n' "$offered" | awk -F'\t' '/^en/{print $1; exit}')
       count=$(printf '%s\n' "$offered" | grep -c .) || true
 
-      # more than one language and someone watching: let them pick
-      if [ "$count" -gt 1 ] && [ -t 0 ]; then
+      # The languages an installer offers are usually its own interface, not the
+      # game's: GOG ships every language and the game picks at run time, from a
+      # registry value or the system locale. Listing is a header read, so asking
+      # innoextract twice costs nothing -- and it turns a menu that decides
+      # nothing into one line saying so. Where the files really do differ (the
+      # goggame-*.info is per-language in some releases) the menu still comes.
+      varies=
+      if [ "$count" -gt 1 ]; then
+        every=$(innoextract --gog --silent --list "$setup" 2>/dev/null | sort | md5sum)
+        just=$(innoextract --gog --silent --language "${pick:-en}" --list "$setup" \
+               2>/dev/null | sort | md5sum)
+        [ "$every" = "$just" ] || varies=yes
+      fi
+
+      # more than one language that matters, and someone watching: let them pick
+      if [ -n "$varies" ] && [ -t 0 ]; then
         printf "$M_OFFERS" "$(basename "$setup")" "$count"
         i=0
         while IFS=$'\t' read -r code label; do
@@ -380,6 +396,10 @@ if [ $# -gt 0 ]; then
           *[!0-9]*) pick=$answer ;;
           *) pick=$(printf '%s\n' "$offered" | sed -n "${answer}p" | cut -f1) ;;
         esac
+      elif [ "$count" -gt 1 ]; then
+        # nothing to choose: extract the lot, and say why there was no question
+        printf "$M_SAME_LANG" "$count"
+        pick=
       fi
       # chosen once, reused for the DLCs that follow
       [ -n "$pick" ] && lang=$pick

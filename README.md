@@ -92,11 +92,14 @@ disguise, it stops before that and says which system to use.
 
 **Rules that always apply:**
 
-1. **Multi-language installers ask, and default to English.** GOG ships one
-   installer with every language inside, and extracting all of them lets the
-   last one win the metadata — which is how an English game comes out Italian.
-   `build.sh` lists them and waits; Enter takes English, and the choice carries
-   to the DLCs in the same run. In a script, `--lang it-IT` or `--lang all`.
+1. **The language question only comes up when it decides something.** Nearly
+   every GOG installer offers a list, but that list is usually its *own*
+   interface — the game carries every language inside and picks at run time.
+   `build.sh` compares what comes out with and without a language filter (a
+   header read, milliseconds) and, when it is the same, says so and extracts the
+   lot. Where the files really do differ it lists them and waits; Enter takes
+   English, and the choice carries to the DLCs in the same run. In a script,
+   `--lang it-IT` or `--lang all`.
 
    GOG's page may advertise four localisations while the installer carries one:
    the others are separate downloads, and go in the same folder as the game.

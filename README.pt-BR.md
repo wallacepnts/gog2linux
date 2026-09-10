@@ -90,11 +90,13 @@ qual sistema usar.
 
 **Regras que valem sempre:**
 
-1. **Instalador multi-idioma pergunta, e assume inglês.** A GOG entrega um
-   instalador só com todos os idiomas dentro, e extrair tudo faz o último vencer
-   os metadados — é assim que um jogo em inglês termina em italiano. O
-   `build.sh` lista e espera; Enter aceita inglês, e a escolha vale pras DLCs da
-   mesma execução. Em script, `--lang it-IT` ou `--lang all`.
+1. **A pergunta de idioma só aparece quando ela decide algo.** Quase todo
+   instalador GOG oferece uma lista, mas ela costuma ser a interface *dele* — o
+   jogo traz todos os idiomas dentro e escolhe na hora de rodar. O `build.sh`
+   compara o que sai com e sem filtro de idioma (é leitura de cabeçalho, custa
+   milissegundos) e, se der no mesmo, diz isso e extrai tudo. Quando os arquivos
+   realmente mudam, aí ele lista e espera; Enter aceita inglês, e a escolha vale
+   pras DLCs da mesma execução. Em script, `--lang it-IT` ou `--lang all`.
 
    A página da GOG pode anunciar quatro localizações e o instalador trazer uma:
    as outras são downloads separados, e vão na mesma pasta do jogo.
