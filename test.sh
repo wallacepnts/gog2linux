@@ -135,6 +135,42 @@ mkdir -p "$tmp/t.pc/tmp"; touch "$tmp/t.pc/game.exe" "$tmp/t.pc/tmp/save.dat"
 has tmp "$("$here/build.sh" "$tmp/t.pc")" "CMD=game.exe"
 [ -e "$tmp/t.pc/tmp/save.dat" ] || { echo "FAILED: reclassify deleted the game's tmp/"; exit 1; }
 
+# the umu database turns a GOG id into the GAMEID protonfixes matches on, so a
+# game with a fix of its own gets it. Cached copy, no network in a test: the
+# lookup has to work offline once the file is there.
+export XDG_CACHE_HOME="$tmp/cache"
+mkdir -p "$tmp/cache/gog2linux"
+{
+  echo 'TITLE,STORE,CODENAME,UMU_ID,COMMON ACRONYM (Optional),NOTE (Optional),EXE_STRINGS (Optional)'
+  echo 'Age of Wonders,gog,1207658883,umu-61500,aow,,'
+  echo '"Blood, Sweat and Tears",zoomplatform,abc123,umu-999999,,,'
+} > "$tmp/cache/gog2linux/umu-database.csv"
+touch "$tmp/cache/gog2linux/umu-database.csv"   # fresh, so it is never re-fetched
+
+mkdir -p "$tmp/umuid.pc"; touch "$tmp/umuid.pc/AoW.exe"
+printf '{"gameId":"1207658883","rootGameId":"1207658883","name":"Age of Wonders","playTasks":[{"category":"game","path":"AoW.exe"}]}' \
+  > "$tmp/umuid.pc/goggame-1.info"
+has umu-id "$("$here/build.sh" "$tmp/umuid.pc")" "GAMEID=umu-61500"
+has umu-id-env "$(cat "$tmp/umuid.pc/autorun.cmd")" "ENV=GAMEID=umu-61500"
+has umu-id-store "$(cat "$tmp/umuid.pc/autorun.cmd")" "ENV=STORE=gog"
+
+# a title the database has never heard of gets no GAMEID at all, rather than a
+# wrong one: play.sh then falls back to umu-default and the global fixes
+mkdir -p "$tmp/umunone.pc"; touch "$tmp/umunone.pc/Game.exe"
+printf '{"gameId":"999","rootGameId":"999","name":"Not In The Database","playTasks":[{"category":"game","path":"Game.exe"}]}' \
+  > "$tmp/umunone.pc/goggame-1.info"
+"$here/build.sh" "$tmp/umunone.pc" >/dev/null
+case "$(cat "$tmp/umunone.pc/autorun.cmd")" in
+  *GAMEID*) echo "FAILED umu-id-absent: wrote a GAMEID for a game with no row"; exit 1 ;;
+esac
+
+# a comma inside a quoted title must not shift the columns -- csv, not cut -d,
+mkdir -p "$tmp/umucomma.pc"; touch "$tmp/umucomma.pc/Game.exe"
+printf '{"gameId":"nope","rootGameId":"nope","name":"Blood, Sweat and Tears","playTasks":[{"category":"game","path":"Game.exe"}]}' \
+  > "$tmp/umucomma.pc/goggame-1.info"
+"$here/build.sh" "$tmp/umucomma.pc" >/dev/null
+has umu-id-comma "$(cat "$tmp/umucomma.pc/autorun.cmd")" "ENV=GAMEID=umu-999999"
+
 # the .info names the exe with Windows casing; the file on disk differs
 mkdir -p "$tmp/case.pc"; touch "$tmp/case.pc/Doom3.exe"
 printf '{"playTasks":[{"category":"game","path":"DOOM3.exe"}]}' > "$tmp/case.pc/goggame-1.info"
@@ -296,6 +332,53 @@ has wrap-deep "$env_line" "xinput1_3"
 has wrap-root "$env_line" "dsound"
 eq wrap-once "$(printf '%s' "$env_line" | grep -o dsound | wc -l)" "1"
 
+# --prefix adopts a prefix made elsewhere -- Lutris, Bottles, Faugus, a plain
+# wine session -- so the .pc ends up self-contained
+mkdir -p "$tmp/foreign/drive_c/windows" "$tmp/adopt.pc"
+touch "$tmp/adopt.pc/game.exe" "$tmp/foreign/drive_c/marker"
+has adopt "$("$here/build.sh" --prefix "$tmp/foreign" "$tmp/adopt.pc")" "prefix adopted"
+[ -f "$tmp/adopt.pc/.prefix/drive_c/marker" ] || { echo "FAILED: prefix did not move in"; exit 1; }
+[ ! -d "$tmp/foreign" ] || { echo "FAILED: left the prefix behind as well"; exit 1; }
+
+# and a folder that is not a prefix is refused instead of moved
+mkdir -p "$tmp/notpfx" "$tmp/adopt2.pc"; touch "$tmp/adopt2.pc/game.exe"
+! "$here/build.sh" --prefix "$tmp/notpfx" "$tmp/adopt2.pc" >/dev/null 2>&1 ||
+  { echo "FAILED: adopted something with no drive_c"; exit 1; }
+
+# GOG ships Linux builds as a shell script with a zip appended: the game lives
+# under data/noarch/ and comes out native, with no wine anywhere
+mkdir -p "$tmp/gl.pc"
+python3 -c "
+import zipfile
+open('$tmp/gogsetup.sh', 'wb').write(b'#!/bin/sh\n# MojoSetup\n' + b'x' * 4000)
+z = zipfile.ZipFile('$tmp/gogsetup.sh', 'a')
+z.writestr('data/noarch/gameinfo', 'Some/Game\n1.0\n123\n')
+z.writestr('data/noarch/start.sh', '#!/bin/sh\ncd game && ./Binary\n')
+z.writestr('data/noarch/game/Binary', '#!/bin/sh\necho ran\n')
+z.close()"
+out=$("$here/build.sh" "$tmp/gl.pc" "$tmp/gogsetup.sh" 2>&1)
+has goglinux "$out" "GOG Linux installer"
+has goglinux-done "$out" "native, through launch.sh"
+[ -x "$tmp/gl.pc/launch.sh" ] || { echo "FAILED: no launch.sh written"; exit 1; }
+[ -x "$tmp/gl.pc/game/Binary" ] || { echo "FAILED: game binary is not executable"; exit 1; }
+[ ! -d "$tmp/gl.pc/data" ] || { echo "FAILED: left data/noarch nesting behind"; exit 1; }
+# the slash in the name would make a second directory level
+eq goglinux-name "$(cat "$tmp/gl.pc/gameinfo" | head -1)" "Some/Game"
+
+# a folder with its own launch.sh is a finished native package, not a failure:
+# there is no Windows executable to find and none is needed
+mkdir -p "$tmp/nat.pc"; printf '#!/bin/sh\necho hi\n' > "$tmp/nat.pc/launch.sh"
+chmod +x "$tmp/nat.pc/launch.sh"
+has native-pkg "$("$here/build.sh" "$tmp/nat.pc")" "native, through launch.sh"
+[ -f "$tmp/nat.pc/play.sh" ] || { echo "FAILED: native package got no play.sh"; exit 1; }
+
+# a repack ships the decompressors and keeps the game in its own archives:
+# extracting reaches the scaffolding, so say that instead of "no executable"
+mkdir -p "$tmp/fg"; touch "$tmp/fg/setup.exe" "$tmp/fg/fg-01.bin" "$tmp/fg/fg-02.bin"
+has repack "$("$here/build.sh" "$tmp/repack.pc" "$tmp/fg/setup.exe" 2>&1 || true)" "is a repack"
+# and it says so before spending five gigabytes of extraction on scaffolding
+[ ! -d "$tmp/repack.pc/_Redist" ] || { echo "FAILED: extracted before checking"; exit 1; }
+
 # a Unity game with .mp4 cutscenes asks for DXVK: wine's own dxgi stubs the call
 # that hands the decoded frame over, and the video plays black
 mkdir -p "$tmp/unity.pc/Game_Data/StreamingAssets"
@@ -440,7 +523,7 @@ while IFS='|' read -r _ games engine _; do
   esac
 # the "Whole catalogues" section is out of scope: ScummVM games are recognised
 # by the files in the installer, never by their name
-done < <(sed '/^## Whole catalogues/,$d' "$here/ENGINES.md" | grep '^| ')
+done < <(sed '/^## Whole catalogues/,$d' "$here/docs/ENGINES.md" | grep '^| ')
 [ -z "$missing" ] || { echo "FAILED: ENGINES.md lists games build.sh ignores: $missing"; exit 1; }
 
 # a classic with an open engine gets a heads-up, not a decision
@@ -588,6 +671,21 @@ eq screen-off "$(GOG2LINUX_SCREEN=no run "$tmp/sc.pc/play.sh")" \
 # asking for a specific executable is asking for that and nothing else
 eq screen-override "$(GOG2LINUX_SCREEN=1280x720 run "$tmp/sc.pc/play.sh" "$tmp/sc.pc" "Editor.exe")" \
                    "$tmp/sc.pc|$tmp/sc.pc/.prefix||Editor.exe"
+
+# umu is the default runner where it exists: it brings Proton inside Steam's
+# container, with DXVK and the rest already assembled
+mkdir -p "$tmp/home/.local/share/umu" "$tmp/umu.pc"
+printf '#!/bin/sh\necho "umu|$PROTONPATH|$GAMEID|$*"\n' > "$tmp/home/.local/share/umu/umu-run"
+chmod +x "$tmp/home/.local/share/umu/umu-run"
+cp "$here/play.sh" "$tmp/umu.pc/"; printf 'CMD=game.exe\n' > "$tmp/umu.pc/autorun.cmd"
+eq umu-default "$(HOME="$tmp/home" GOG2LINUX_INHIBIT=no "$tmp/umu.pc/play.sh" 2>/dev/null)" \
+                "umu|GE-Proton|umu-default|game.exe"
+
+# and it steps aside for a runner named on purpose, or when told to
+eq umu-off "$(HOME="$tmp/home" GOG2LINUX_UMU=no run "$tmp/umu.pc/play.sh")" \
+           "$tmp/umu.pc|$tmp/umu.pc/.prefix||game.exe"
+eq umu-explicit "$(HOME="$tmp/home" run "$tmp/umu.pc/play.sh")" \
+                "$tmp/umu.pc|$tmp/umu.pc/.prefix||game.exe"
 
 # a wine game keeps the machine awake: it speaks no idle-inhibit protocol of its
 # own, so the desktop would suspend mid-level

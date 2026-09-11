@@ -1,7 +1,7 @@
 # Native engines for GOG classics
 
 *As tabelas são neutras de idioma; a introdução está em inglês, como o resto do
-repositório. Veja o [README em português](README.pt-BR.md).*
+repositório. Veja o [README em português](../README.pt-BR.md).*
 
 Many classics have had their engine rewritten or their source released. Where
 that happened, the result beats wine on every count: native binary, real

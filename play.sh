@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
-# Runs a Batocera-format game on any distro.
+# Runs a packaged .pc game on any Linux distro.
 #
 #   ./play.sh                        the folder this script sits in (.pc or .wine)
 #   ./play.sh Game.wtgz              extract and run
 #   ./play.sh Game.wsquashfs         same (needs unsquashfs)
 #   ./play.sh . "Launcher.exe"       run another executable in the same prefix
 #
-# Batocera ignores this script and reads autorun.cmd directly. This file gets
-# copied into every game folder, so it has to stand on its own: no sourcing,
-# no assuming build.sh is anywhere nearby.
+# This file gets copied into every game folder, so it has to stand on its own:
+# no sourcing, no assuming build.sh is anywhere nearby.
 set -euo pipefail
 shopt -s nullglob
 
@@ -26,11 +25,13 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
   pt*) M_NO_AUTORUN="autorun.cmd nao encontrado em %s\n"
        M_NO_CMD="autorun.cmd sem linha CMD= em %s\n"
        M_NO_EXEC="aviso: %s sem permissao de execucao, seguindo pelo wine\n"
-       M_DXVK="dxvk ligado no prefixo, de %s\n" ;;
+       M_DXVK="dxvk ligado no prefixo, de %s\n"
+       M_UMU="rodando pelo umu (%s)\n" ;;
   *)   M_NO_AUTORUN="autorun.cmd not found in %s\n"
        M_NO_CMD="autorun.cmd has no CMD= line in %s\n"
        M_NO_EXEC="warning: %s is not executable, falling back to wine\n"
-       M_DXVK="dxvk wired into the prefix, from %s\n" ;;
+       M_DXVK="dxvk wired into the prefix, from %s\n"
+       M_UMU="running through umu (%s)\n" ;;
 esac
 
 target=$(readlink -f "${1:-$(dirname "$(readlink -f "$0")")}")
@@ -84,7 +85,7 @@ if [ -z "${FORCE_WINE:-}" ] && [ -z "$override" ] && [ -f "$target/launch.sh" ];
   [ -x "$target/launch.sh" ] || chmod +x "$target/launch.sh" 2>/dev/null || true
   if [ -x "$target/launch.sh" ]; then
     cd "$target"
-    exec "$target/launch.sh"
+    exec "$target/launch.sh" "$@"
   fi
   printf "$M_NO_EXEC" "$target/launch.sh" >&2
 fi
@@ -92,7 +93,8 @@ fi
 # The implicit one: a Linux build shipped alongside (Ren'Py and friends). Both
 # clues are required here so an install script doesn't get mistaken for a
 # launcher.
-if [ -z "${FORCE_WINE:-}" ] && [ -z "$override" ] && compgen -G "$target/lib/*linux*" >/dev/null; then
+native_lib=("$target"/lib/*linux*)
+if [ -z "${FORCE_WINE:-}" ] && [ -z "$override" ] && [ ${#native_lib[@]} -gt 0 ]; then
   for candidate in "$target"/*.sh; do
     # launch.sh was already tried above; warning about it twice helps no one
     case "${candidate##*/}" in play.sh|launch.sh) continue ;; esac
@@ -185,7 +187,7 @@ if [ -n "$SCREEN" ] && [ -z "$override" ] && [ "${GOG2LINUX_SCREEN:-}" != no ]; 
   mode=${GOG2LINUX_SCREEN:-}
   if [ -z "$mode" ]; then
     # first line of a connected output's mode list is the one it prefers; a
-    # disconnected output has an empty file. No xrandr, so Batocera has it too.
+    # disconnected output has an empty file. No xrandr needed.
     for modes in /sys/class/drm/*/modes; do
       read -r mode < "$modes" 2>/dev/null || continue
       case "$mode" in [0-9]*x[0-9]*) break ;; *) mode= ;; esac
@@ -201,10 +203,32 @@ if [ -n "$SCREEN" ] && [ -z "$override" ] && [ "${GOG2LINUX_SCREEN:-}" != no ]; 
   esac
 fi
 
+# umu runs the game through Proton inside Steam's own container, which is where
+# DXVK, VKD3D and a FAudio built with ffmpeg come from already assembled. It is
+# the better runner wherever it exists; where it is missing, the distro's wine
+# is still the answer, so this falls back rather than insisting.
+# WINE set by hand, or by an ENV= line, always wins. GOG2LINUX_UMU=no opts out.
+umu=
+if [ -z "${WINE:-}" ] && [ "${GOG2LINUX_UMU:-}" != no ]; then
+  for candidate in "$HOME/.local/share/umu/umu-run" "$HOME/.local/bin/umu-run" \
+                   "$(command -v umu-run 2>/dev/null)"; do
+    [ -n "$candidate" ] && [ -x "$candidate" ] || continue
+    umu=$candidate
+    WINE=$candidate
+    # GE-Proton by name, not by path: umu fetches it, and the same autorun.cmd
+    # then works on a machine that never had it
+    export PROTONPATH="${PROTONPATH:-GE-Proton}"
+    export GAMEID="${GAMEID:-umu-default}"
+    export STORE="${STORE:-none}"
+    printf "$M_UMU" "$PROTONPATH" >&2
+    break
+  done
+fi
+
 # The ENV= line can ask for DXVK, but asking is not having: the DLLs have to be
-# in the prefix, and only this machine knows where its distro keeps them. On
-# Batocera none of these paths exist -- there DXVK is a switch in the options.
-case "${WINEDLLOVERRIDES:-}" in
+# in the prefix, and only this machine knows where its distro keeps them.
+case "${umu:+skip}${WINEDLLOVERRIDES:-}" in
+  skip*) ;;                       # Proton brings its own; leave the prefix alone
   *dxgi*)
     sys="$WINEPREFIX/drive_c/windows/system32"
     if [ ! -L "$sys/d3d11.dll" ]; then
@@ -233,7 +257,7 @@ cd "$target/$DIR"
 # screensaver and speaks no idle-inhibit protocol, so the countdown keeps
 # running and the machine suspends in the middle of a level. This holds it off
 # for exactly as long as the game runs, and lets go on its own. Native games go
-# through SDL, which already does this. No systemd (Batocera): nothing to hold.
+# through SDL, which already does this. No systemd: nothing to hold.
 # the line below runs through eval, so anything with a space in it has to reach
 # eval already quoted -- a Proton build lives in "Proton - Experimental"
 winecmd=$(printf '%q' "${WINE:-wine}")

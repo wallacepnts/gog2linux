@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# GOG installer (InnoSetup) -> .pc folder that runs on Batocera and on any distro.
+# GOG installer (InnoSetup) -> .pc folder that runs on any Linux distro.
 #
 #   ./build.sh                                   packages everything in install/
 #   ./build.sh Game                              Game/ holds the installers -> Game.pc
@@ -19,12 +19,84 @@ shopt -s dotglob nullglob
 
 die() { echo "$*" >&2; exit 1; }
 
+# The launcher play.sh looks for. A native package -- GOG's own Linux build, a
+# Steam rip, anything following the same shape -- puts start.sh at its root and
+# the game in game/; this is the one line that turns that into a .pc.
+write_launch() {
+  [ -e "$1/launch.sh" ] && return 0
+  chmod +x "$1/start.sh" 2>/dev/null || true
+  {
+    echo '#!/bin/sh'
+    echo '# Native build: start.sh does the cd into game/ and runs the binary.'
+    echo '# play.sh prefers this file over anything that involves wine.'
+    echo 'here=$(dirname "$(readlink -f "$0")")'
+    echo 'cd "$here" && exec ./start.sh "$@"'
+  } > "$1/launch.sh"
+  chmod +x "$1/launch.sh"
+}
+
+# protonfixes ships a workaround per game -- protontricks('xact') for one whose
+# audio needs it, a DLL override, a launch flag -- and chooses it by GAMEID.
+# umu itself never looks the id up: "GAMEID is strictly required and the client
+# is responsible for setting this". This is that client. Without the lookup
+# every game is umu-default and gets only the global fixes.
+# Resolved here and written into autorun.cmd, so the .pc keeps working offline.
+UMU_DB=${XDG_CACHE_HOME:-$HOME/.cache}/gog2linux/umu-database.csv
+UMU_DB_URL=https://raw.githubusercontent.com/Open-Wine-Components/umu-database/main/umu-database.csv
+
+umu_db() {
+  command -v curl >/dev/null 2>&1 || return 1
+  # a week old is fine: the table grows, it does not churn. Download to .new and
+  # move, so a connection that dies halfway leaves the old copy intact.
+  if [ ! -s "$UMU_DB" ] || [ -n "$(find "$UMU_DB" -mtime +7 2>/dev/null)" ]; then
+    mkdir -p "$(dirname "$UMU_DB")"
+    if curl -sSfL --max-time 20 -o "$UMU_DB.new" "$UMU_DB_URL" 2>/dev/null; then
+      mv "$UMU_DB.new" "$UMU_DB"
+    else
+      rm -f "$UMU_DB.new"
+    fi
+  fi
+  [ -s "$UMU_DB" ]
+}
+
+# prints "<umu id> <store>", or nothing at all. No network and no cached copy is
+# not an error here: the game still runs, it just runs without its fix.
+umu_id() {
+  umu_db || return 0
+  python3 - "$UMU_DB" "${1:-}" "${2:-}" <<'PYUMU'
+import csv, sys
+db, gogid, title = sys.argv[1], sys.argv[2], sys.argv[3].casefold()
+try:
+    rows = list(csv.reader(open(db, encoding='utf-8')))[1:]
+except (OSError, UnicodeDecodeError):
+    raise SystemExit(0)
+# The store's own id is exact. The title is the fallback, for a game that got
+# here some other way -- and it is exact too: a fix aimed at the wrong game is
+# worse than no fix. csv.reader, not a split on commas: plenty of titles have one.
+for row in rows:
+    if len(row) > 3 and gogid and row[1] == 'gog' and row[2] == gogid:
+        print(row[3], row[1])
+        break
+else:
+    for row in rows:
+        if len(row) > 3 and title and row[0].casefold() == title:
+            print(row[3], row[1])
+            break
+PYUMU
+}
+
 # GOG's own title, straight from the InnoSetup header. It names the .pc folder,
 # so nothing in install/ has to be named by hand; empty means "not an installer"
 gog_title() {
-  innoextract -i "$1" 2>/dev/null |
-    sed -n '1s|^Inspecting "\(.*\)" - setup data version.*|\1|p' |
-    tr '/' '-'
+  local name
+  # a GOG Linux installer is a shell script with a zip appended; line 1 of
+  # data/noarch/gameinfo is the name, and unzip reads straight past the script
+  name=$(unzip -p "$1" data/noarch/gameinfo 2>/dev/null | head -1)
+  if [ -z "$name" ]; then
+    name=$(innoextract -i "$1" 2>/dev/null |
+           sed -n '1s|^Inspecting "\(.*\)" - setup data version.*|\1|p')
+  fi
+  printf '%s' "${name//\//-}"
 }
 
 # GOG labels languages by code; a list of codes is not a menu anyone can read.
@@ -59,7 +131,8 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
   (sem nada)  empacota tudo que estiver em install/\n\
   Jogo        pasta com os instaladores (DLCs numa subpasta) -> vira Jogo.pc\n\
   Jogo.pc     pasta-da-gog (ou setup.exe dlc.exe ...)\n\
-  Jogo.pc     sozinho, so reclassifica uma pasta ja extraida\n"
+  Jogo.pc     sozinho, so reclassifica uma pasta ja extraida\n\
+  --prefix DIR  adota um prefixo pronto (Lutris, Bottles, Faugus...) como .prefix\n"
     M_NO_INNO="falta o innoextract: instale o pacote innoextract (apt/dnf/pacman/zypper)"
     M_NO_PY="falta o python3: instale o pacote python3"
     M_NOT_DEST="o primeiro argumento e a pasta de destino, nao o instalador"
@@ -74,17 +147,21 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_ONLY_LANG="idioma: %s (%s) - o unico que este instalador traz\n"
     M_META="nao consegui ler os metadados da GOG (veja o erro do python acima)"
     M_NO_EXE="nao achei o executavel do jogo em %s\n"
+    M_NATIVE_PKG="pronto: %s (nativo, pelo launch.sh - sem wine)\n"
+    M_NO_PREFIX="isto nao parece um prefixo wine (falta drive_c): %s\n"
+    M_ADOPTED="prefixo adotado: %s -> .prefix\n"
+    M_LINUX_GOG="instalador Linux da GOG: extraindo sem wine\n"
+    M_REPACK="%s e um repack: o jogo mora em arquivos proprios (fg-*.bin, *.arc),\n  e so o instalador sabe abri-los. O innoextract alcanca so os descompressores.\n"
+    M_REPACK2="  instale com a interface dele, sob umu, numa pasta dentro da sua home;\n    depois ./build.sh nessa pasta. Veja docs/pt-BR/packaging.md"
     M_WORKDIR="obs: o jogo roda de dentro de %s/ - e o que a GOG pede\n"
     M_EXTRACTED="extraido: %s\n"
     M_EXTRACTING="extraindo: %s\n"
     M_WARN_KIND="ATENCAO: este e um jogo %s disfarcado. NAO passe pelo wine.\n"
     M_HERE="  aqui:"
-    M_BATOCERA="  Batocera:"
     M_DOS_PKG="instale o pacote dosbox, depois:"
-    M_DOS_BATO="/userdata/roms/dos/  (nome <=8 caracteres, com dosbox.bat; nao copie o .conf da GOG)"
     M_SCUMM_PKG="instale o pacote scummvm"
-    M_SCUMM_BATO="/userdata/roms/scummvm/"
     M_NO_AUTORUN="Nenhum autorun.cmd gerado - seria inutil. Veja o README."
+    M_UMU_ID="correcao propria do umu para este jogo: GAMEID=%s (loja %s)\n"
     M_DONE="pronto: %s (CMD=%s)\n"
     M_PORT="obs: %s tem motor reimplementado (%s) - nativo, melhor que wine: %s\n"
     M_DXCFG="obs: dxcfg.ini estava em janela; mudei para tela cheia (edite o arquivo para voltar)"
@@ -99,7 +176,7 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_LOVE="obs: jogo LOVE (%s) - launch.sh escrito, o play.sh roda pelo motor nativo\n"
     M_PENDING="\nfalta no sistema, pra este jogo rodar:\n"
     M_NEED_LOVE="  o motor LOVE: pacote love, ou flatpak install flathub org.love2d.love2d\n"
-    M_NEED_DXVK="  DXVK: pacote dxvk - sem ele a animacao fica preta\n"
+    M_NEED_DXVK="  DXVK: pacote dxvk, ou instale o umu, que ja traz - sem um dos dois\n    a animacao fica preta\n"
     M_NEED_GST32="  plugins gstreamer de 32 bits: gstreamer-plugins-libav-32bit,\n    -good-32bit, -ugly-32bit - sem eles o audio comprimido derruba o jogo\n"
     M_NEED_WINE="  wine: so pra jogar, empacotar nao precisa\n"
     M_ASK_MENU='Adicionar "%s" ao menu de jogos? [s/N] '
@@ -126,7 +203,8 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
   (nothing)   packages everything sitting in install/\n\
   Game        folder holding the installers (DLCs in a subfolder) -> becomes Game.pc\n\
   Game.pc     gog-folder (or setup.exe dlc.exe ...)\n\
-  Game.pc     on its own, only reclassifies an already extracted folder\n"
+  Game.pc     on its own, only reclassifies an already extracted folder\n\
+  --prefix DIR  adopt a ready-made prefix (Lutris, Bottles, Faugus...) as .prefix\n"
     M_NO_INNO="innoextract is missing: install the innoextract package (apt/dnf/pacman/zypper)"
     M_NO_PY="python3 is missing: install the python3 package"
     M_NOT_DEST="first argument is the destination folder, not the installer"
@@ -141,17 +219,21 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_ONLY_LANG="language: %s (%s) - the only one this installer carries\n"
     M_META="could not read the GOG metadata (see the python error above)"
     M_NO_EXE="could not find the game executable in %s\n"
+    M_NATIVE_PKG="done: %s (native, through launch.sh - no wine)\n"
+    M_NO_PREFIX="that does not look like a wine prefix (no drive_c): %s\n"
+    M_ADOPTED="prefix adopted: %s -> .prefix\n"
+    M_LINUX_GOG="GOG Linux installer: extracting, no wine involved\n"
+    M_REPACK="%s is a repack: the game lives in archives of its own (fg-*.bin, *.arc)\n  that only the installer can open. innoextract reaches the decompressors only.\n"
+    M_REPACK2="  install it through its own interface, under umu, into a folder in your\n    home; then ./build.sh on that folder. See docs/en/packaging.md"
     M_WORKDIR="note: the game runs from inside %s/ - which is what GOG asks for\n"
     M_EXTRACTED="extracted: %s\n"
     M_EXTRACTING="extracting: %s\n"
     M_WARN_KIND="WARNING: this is a %s game in disguise. Do NOT run it through wine.\n"
     M_HERE="  here:"
-    M_BATOCERA="  Batocera:"
     M_DOS_PKG="install the dosbox package, then:"
-    M_DOS_BATO="/userdata/roms/dos/  (name <=8 chars, with dosbox.bat; don't copy GOG's .conf)"
     M_SCUMM_PKG="install the scummvm package"
-    M_SCUMM_BATO="/userdata/roms/scummvm/"
     M_NO_AUTORUN="No autorun.cmd written - it would be useless. See the README."
+    M_UMU_ID="umu has a fix of its own for this game: GAMEID=%s (%s store)\n"
     M_DONE="done: %s (CMD=%s)\n"
     M_PORT="note: %s has a reimplemented engine (%s) - native, better than wine: %s\n"
     M_DXCFG="note: dxcfg.ini was set to windowed; switched to fullscreen (edit the file to revert)"
@@ -166,7 +248,7 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_LOVE="note: LOVE game (%s) - launch.sh written, play.sh runs the native engine\n"
     M_PENDING="\nmissing on this system, for this game to run:\n"
     M_NEED_LOVE="  the LOVE engine: the love package, or flatpak install flathub org.love2d.love2d\n"
-    M_NEED_DXVK="  DXVK: the dxvk package - without it the cutscenes play black\n"
+    M_NEED_DXVK="  DXVK: the dxvk package, or install umu, which brings it - without\n    either, the cutscenes play black\n"
     M_NEED_GST32="  32-bit gstreamer plugins: gstreamer-plugins-libav-32bit,\n    -good-32bit, -ugly-32bit - without them compressed audio takes the game down\n"
     M_NEED_WINE="  wine: only needed to play, not to package\n"
     M_ASK_MENU='Add "%s" to the desktop games menu? [y/N] '
@@ -193,6 +275,7 @@ esac
 
 desktop=ask
 lang=auto
+adopt=
 missing=      # what the host still needs for this game; reported at the end
 flags=()   # kept verbatim: the install/ pass below re-runs this script per game
 while [ $# -gt 0 ]; do
@@ -201,6 +284,9 @@ while [ $# -gt 0 ]; do
     --no-desktop) desktop=no;  flags+=("$1"); shift ;;
     --lang)       lang=${2:-}; flags+=("$1" "${2:-}"); shift 2 ;;
     --lang=*)     lang=${1#--lang=}; flags+=("$1"); shift ;;
+    # deliberately not in $flags: it belongs to one target, not to a whole inbox
+    --prefix)     adopt=${2:-}; shift 2 ;;
+    --prefix=*)   adopt=${1#--prefix=}; shift ;;
     # without this, --help lands in readlink -f and comes back as its own usage
     -h|--help)    printf "$M_USAGE" "$0"; exit 0 ;;
     *)            break ;;
@@ -362,6 +448,19 @@ $(printf "$M_USAGE" "$0")" ;; esac
 fi
 
 mkdir -p "$target"
+
+# A game installed by something else -- Lutris, Bottles, Faugus, a plain wine
+# session -- leaves its prefix outside the folder. Move it in and the .pc becomes
+# self-contained: saves.sh and uninstall.sh can see it, and it travels whole.
+# The other tool's entry points at the old path and will stop working; copy the
+# prefix first if you want to keep it.
+if [ -n "$adopt" ]; then
+  adopt=$(readlink -f "$adopt")
+  [ -d "$adopt/drive_c" ] || die "$(printf "$M_NO_PREFIX" "$adopt")"
+  rm -rf "$target/.prefix"
+  mv "$adopt" "$target/.prefix"
+  printf "$M_ADOPTED" "$adopt"
+fi
 if [ $# -gt 0 ]; then
   # The merge below hardlinks app/ onto the root, so a run that died between
   # extracting and merging leaves app/ pointing at the very files the game now
@@ -431,6 +530,39 @@ if [ $# -gt 0 ]; then
         printf "$M_LANG" "$pick" "$(lang_show "$pick")"
       fi
     fi
+    # GOG ships its Linux builds as a MojoSetup shell script with a zip glued to
+    # the end: the game sits under data/noarch/, and unzip reads straight past
+    # the script part. No wine, no innoextract, and what comes out is native.
+    if [ -n "$(unzip -p "$setup" data/noarch/gameinfo 2>/dev/null)" ]; then
+      printf "$M_LINUX_GOG"
+      unzip -q -o "$setup" 'data/noarch/*' -d "$target" 2>/dev/null || true
+      cp -a "$target/data/noarch/." "$target/" && rm -rf "$target/data"
+      chmod +x "$target/start.sh" 2>/dev/null || true
+      # the game binary carries no extension; the zip loses the execute bit
+      find "$target/game" -maxdepth 1 -type f ! -name '*.*' \
+           -exec chmod +x {} + 2>/dev/null || true
+      write_launch "$target"
+      continue
+    fi
+
+    # A repack keeps the game in archives of its own beside the installer --
+    # fg-*.bin from FitGirl, *.arc from others -- and only the installer knows
+    # how to open them; what is inside the .exe is just the decompressors.
+    # Cheaper to say so before extracting five gigabytes of scaffolding.
+    # quoted variable, unquoted pattern: compgen -G would take the brackets in
+    # "DRAGON QUEST VII [FitGirl Repack]" for a character class and match nothing
+    here_dir=$(dirname "$setup")
+    repack=("$here_dir"/fg-*.bin "$here_dir"/*.arc)
+    # Payload names are the repacker's taste -- fg-*.bin, *.arc, Data/Files1.bin
+    # -- but they all drive unarc.dll from inside the installer, and the name of
+    # the DLL sits in the .exe in plain text. That is the honest test; a *.bin
+    # glob would also swallow setup-1.bin, which is innoextract's own slice.
+    if [ ${#repack[@]} -gt 0 ] || grep -qai 'unarc\.dll' "$setup"; then
+      printf "$M_REPACK" "$(basename "$setup")"
+      printf '%b\n' "$M_REPACK2"
+      exit 1
+    fi
+
     # --silent eats the progress bar, and a 1.6 GB installer is minutes of
     # silence without it. Put it back -- but only on a terminal: innoextract
     # draws it wherever output goes, and a log of escape codes helps no one.
@@ -447,6 +579,19 @@ if [ $# -gt 0 ]; then
       exit 1
     fi
   done
+  # A repack keeps the game in its own FreeArc archives and ships only the
+  # decompressors inside the installer, so extracting gets the scaffolding and
+  # nothing else. Say so here, where tmp/ still exists to prove it -- otherwise
+  # the run ends on "could not find the game executable", which is true and
+  # explains nothing.
+  if [ -f "$target/tmp/ISDone.dll" ] || [ -f "$target/tmp/facompress.dll" ] \
+     || [ -f "$target/tmp/unarc.dll" ]; then
+    rm -rf "$target/tmp" "$target/__redist"
+    printf "$M_REPACK" "$(basename "$setup")"
+    printf '%b\n' "$M_REPACK2"
+    exit 1
+  fi
+
   # installer scaffolding. Only after extracting: in reclassify mode that tmp/
   # may well be a folder belonging to the game itself.
   rm -rf "$target/tmp" "$target/__redist"
@@ -477,13 +622,16 @@ def load(pattern):
             pass
 
 
-tasks, langs, name, base = [], {'*'}, '', ''
+tasks, langs, name, base, base_id, any_id = [], {'*'}, '', '', '', ''
 for d in load('goggame-*.info'):
     title = d.get('name') or ''
     # a DLC ships its own .info, and sorting by filename can put it first --
     # only the base game has gameId == rootGameId
-    if title and d.get('gameId') and d.get('gameId') == d.get('rootGameId'):
+    gid = str(d.get('gameId') or '')
+    any_id = any_id or gid
+    if title and gid and gid == str(d.get('rootGameId') or ''):
         base = base or title
+        base_id = base_id or gid
     name = name or title
     langs |= {str(x).lower() for x in (d.get('languages') or [])}
     for t in d.get('playTasks') or []:
@@ -581,6 +729,7 @@ print(chosen)
 print(';'.join(sorted({p for _, _, p, _ in tasks if p != chosen})))
 print(base or name)
 print(chosen_dir)
+print(base_id or any_id)
 PYMETA
 ) || die "$M_META"
 
@@ -588,6 +737,7 @@ exe=$(printf '%s\n' "$meta" | sed -n 1p)
 others=$(printf '%s\n' "$meta" | sed -n 2p)
 name=$(printf '%s\n' "$meta" | sed -n 3p)
 workdir=$(printf '%s\n' "$meta" | sed -n 4p)
+gogid=$(printf '%s\n' "$meta" | sed -n 5p)
 # no metadata: the folder name, with the first letter raised
 if [ -z "$name" ]; then
   name=$(basename "${target%.pc}")
@@ -615,9 +765,10 @@ fi
 # GOG wraps old games in a DOSBox/ScummVM. Pushing that through wine means
 # running an emulator inside an API translator: send it to the native system.
 kind=
+scummvm_marker=("$target"/*.scummvm)   # a quoted variable, an unquoted pattern
 if [ -d "$target/DOSBOX" ] || [ -d "$target/dosbox" ]; then
   kind=dos
-elif [ -e "$target/scummvm.exe" ] || compgen -G "$target/*.scummvm" >/dev/null; then
+elif [ -e "$target/scummvm.exe" ] || [ ${#scummvm_marker[@]} -gt 0 ]; then
   kind=scummvm
 else
   case "${exe,,}" in
@@ -633,13 +784,22 @@ if [ -n "$kind" ]; then
   if [ "$kind" = dos ]; then
     echo "$M_HERE     $M_DOS_PKG"
     echo "            cd $(basename "$target") && dosbox -conf dosbox_*.conf -conf dosbox_*_single.conf"
-    echo "$M_BATOCERA $M_DOS_BATO"
   else
     echo "$M_HERE     $M_SCUMM_PKG"
-    echo "$M_BATOCERA $M_SCUMM_BATO"
   fi
   echo
   echo "$M_NO_AUTORUN"
+  exit 0
+fi
+
+# A folder carrying its own launch.sh is already a finished native package --
+# the Linux build GOG ships separately, or a LOVE game. There is no Windows
+# executable to look for, and play.sh reaches launch.sh long before it wants an
+# autorun.cmd. Refresh the helper scripts and call it done.
+if [ -z "$exe" ] && { [ -x "$target/launch.sh" ] || [ -f "$target/start.sh" ]; }; then
+  write_launch "$target"
+  cp "$here/play.sh" "$here/uninstall.sh" "$here/saves.sh" "$target/"
+  printf "$M_NATIVE_PKG" "$(basename "$target")"
   exit 0
 fi
 
@@ -681,8 +841,8 @@ case "$exe" in *\ *) exe="\"$exe\"" ;; esac
 
 # GOG ships graphics/input wrappers named after wine builtins - a scaling ddraw,
 # a gamepad dinput. Wine has a hardcoded load order and uses its own, so the
-# wrapper sits there unused and the game renders in a corner. ENV= fixes it on
-# Batocera too, which is why it goes in autorun.cmd rather than play.sh.
+# wrapper sits there unused and the game renders in a corner. ENV= goes in
+# autorun.cmd rather than play.sh so it travels with the folder.
 # GOG puts the wrapper next to the executable, which for a game with a working
 # directory is not the root of the .pc -- Trials of Mana keeps its xinput1_3.dll
 # three levels down. Look in both, and do not name the same one twice.
@@ -715,7 +875,8 @@ done
 engine=
 [ -f "$target/UnityPlayer.dll" ] && engine=unity
 # by the folder, not by $exe: the working directory above already shortened it
-compgen -G "$target/*/Binaries/Win*/*-Shipping.exe" >/dev/null && engine=unreal
+unreal_exe=("$target"/*/Binaries/Win*/*-Shipping.exe)
+[ ${#unreal_exe[@]} -gt 0 ] && engine=unreal
 unity=
 [ "$engine" = unity ] && unity=yes
 unity_mf=
@@ -725,6 +886,10 @@ if [ -n "$unity" ] &&
 fi
 overrides="$wrappers${wrappers:+${unity_mf:+,}}$unity_mf"
 
+# Ask the umu database what this game is called there. Costs one 90 KB download
+# a week, and nothing at all when the answer is no.
+read -r umu_gameid umu_store <<< "$(umu_id "$gogid" "$name")"
+
 {
   [ -n "$overrides" ] && printf 'ENV=WINEDLLOVERRIDES="%s=n,b"\n' "$overrides"
   # a Unity player left to itself picks a 16:9 mode and lets the compositor
@@ -732,11 +897,16 @@ overrides="$wrappers${wrappers:+${unity_mf:+,}}$unity_mf"
   # them in; here we only say that this game wants them.
   [ -n "$workdir" ] && printf 'DIR=%s\n' "$workdir"
   [ -n "$engine" ] && printf 'SCREEN=%s\n' "$engine" 
+  # GAMEID is what protonfixes matches on, STORE is which of its tables to look
+  # in -- gamefixes-gog/, gamefixes-steam/. Neither is guessed: both come from
+  # the row that matched.
+  [ -n "$umu_gameid" ] && printf 'ENV=GAMEID=%s\nENV=STORE=%s\n' "$umu_gameid" "$umu_store"
   printf 'CMD=%s\n' "$exe"
 } > "$target/autorun.cmd"
+[ -n "$umu_gameid" ] && printf "$M_UMU_ID" "$umu_gameid" "$umu_store"
 cp "$here/play.sh" "$here/uninstall.sh" "$here/saves.sh" "$target/"
 # GOG's DirectDraw wrapper ships set to windowed. On a desktop that is a small
-# box in the corner; on Batocera it is worse. Flip it, and say so.
+# box in the corner. Flip it, and say so.
 if [ -f "$target/dxcfg.ini" ] && grep -q '^presentation=windowed' "$target/dxcfg.ini"; then
   sed -i 's/^presentation=windowed/presentation=fullscreen/' "$target/dxcfg.ini"
   echo "$M_DXCFG"
@@ -997,7 +1167,8 @@ fi
 
 # Ren'Py and friends: the Windows installer usually carries the Linux build too.
 # Same rule as play.sh (the two copies are deliberate, see the note there).
-if compgen -G "$target/lib/*linux*" >/dev/null; then
+native_lib=("$target"/lib/*linux*)
+if [ ${#native_lib[@]} -gt 0 ]; then
   for candidate in "$target"/*.sh; do
     native=${candidate##*/}
     [ "$native" = play.sh ] && continue
@@ -1057,7 +1228,14 @@ fi
 
 # What this machine still lacks for this particular game. Said once, at the end,
 # with the package names -- finding out from a crash dump costs an evening.
-if [ -n "$unity_mf" ]; then
+# umu brings Proton, and Proton brings DXVK: asking for the distro package on a
+# machine that has umu would be sending someone after something already there.
+have_umu=
+for runner in "$HOME/.local/share/umu/umu-run" "$HOME/.local/bin/umu-run" \
+              "$(command -v umu-run 2>/dev/null)"; do
+  [ -n "$runner" ] && [ -x "$runner" ] && have_umu=yes && break
+done
+if [ -n "$unity_mf" ] && [ -z "$have_umu" ]; then
   have=
   for dxvk in /usr/libexec/dxvk/lib64 /usr/share/dxvk/x64 /usr/lib/dxvk/x64 /opt/dxvk/x64; do
     [ -f "$dxvk/d3d11.dll" ] && have=yes && break
