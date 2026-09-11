@@ -103,11 +103,24 @@ PYUMU
 
 # GOG's own title, straight from the InnoSetup header. It names the .pc folder,
 # so nothing in install/ has to be named by hand; empty means "not an installer"
+# LinuxRuleZ and the like wrap a game in a YAD Simple Installer: a shell script
+# with a zstd tarball glued on. It declares the name it unpacks under at the top,
+# in plain sight, and carries an -e flag that unpacks with no GUI at all.
+# Read by lines, not by bytes: the tarball below is binary, and a command
+# substitution would drop its null bytes and complain about each one.
+yad_app() {
+  head -n 200 "$1" 2>/dev/null | grep -qa 'YAD Simple Installer' || return 1
+  head -n 200 "$1" 2>/dev/null | sed -n 's/^app="\(.*\)"$/\1/p' | head -1
+}
+
 gog_title() {
   local name
   # a GOG Linux installer is a shell script with a zip appended; line 1 of
   # data/noarch/gameinfo is the name, and unzip reads straight past the script
   name=$(unzip -p "$1" data/noarch/gameinfo 2>/dev/null | head -1)
+  if [ -z "$name" ]; then
+    name=$(yad_app "$1") || name=
+  fi
   if [ -z "$name" ]; then
     name=$(innoextract -i "$1" 2>/dev/null |
            sed -n '1s|^Inspecting "\(.*\)" - setup data version.*|\1|p')
@@ -167,6 +180,8 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_NO_PREFIX="isto nao parece um prefixo wine (falta drive_c): %s\n"
     M_ADOPTED="prefixo adotado: %s -> .prefix\n"
     M_LINUX_GOG="instalador Linux da GOG: extraindo sem wine\n"
+    M_YAD="instalador YAD (%s): extraindo sem wine\n"
+    M_YAD_FAIL="a extracao do instalador YAD falhou: %s"
     M_REPACK="%s e um repack: o jogo mora em arquivos proprios (fg-*.bin, *.arc),\n  e so o instalador sabe abri-los. O innoextract alcanca so os descompressores.\n"
     M_REPACK2="  instale com a interface dele, sob umu, numa pasta dentro da sua home;\n    depois ./build.sh nessa pasta. Veja docs/pt-BR/packaging.md"
     M_WORKDIR="obs: o jogo roda de dentro de %s/ - e o que a GOG pede\n"
@@ -239,6 +254,8 @@ case "${GOG2LINUX_LANG:-${LC_ALL:-${LANG:-en}}}" in
     M_NO_PREFIX="that does not look like a wine prefix (no drive_c): %s\n"
     M_ADOPTED="prefix adopted: %s -> .prefix\n"
     M_LINUX_GOG="GOG Linux installer: extracting, no wine involved\n"
+    M_YAD="YAD installer (%s): extracting, no wine involved\n"
+    M_YAD_FAIL="the YAD installer failed to extract: %s"
     M_REPACK="%s is a repack: the game lives in archives of its own (fg-*.bin, *.arc)\n  that only the installer can open. innoextract reaches the decompressors only.\n"
     M_REPACK2="  install it through its own interface, under umu, into a folder in your\n    home; then ./build.sh on that folder. See docs/en/packaging.md"
     M_WORKDIR="note: the game runs from inside %s/ - which is what GOG asks for\n"
@@ -546,6 +563,26 @@ if [ $# -gt 0 ]; then
         printf "$M_LANG" "$pick" "$(lang_show "$pick")"
       fi
     fi
+    # The YAD installer's own -e flag unpacks it and asks for the destination on
+    # stdin -- nothing here needs reverse-engineering, only telling it where. It
+    # always creates <destination>/<app>, so unpack beside the target, on the
+    # same filesystem, and move the contents in: a rename costs nothing, where
+    # copying five gigabytes twice costs minutes.
+    if yad_name=$(yad_app "$setup"); [ -n "$yad_name" ]; then
+      printf "$M_YAD" "$yad_name"
+      staging="$(dirname "$target")/.gog2linux-yad.$$"
+      rm -rf "$staging"; mkdir -p "$staging"
+      if ! printf '%s\n' "$staging" | bash "$setup" -e ||
+         [ ! -d "$staging/$yad_name" ]; then
+        rm -rf "$staging"
+        die "$(printf "$M_YAD_FAIL" "$(basename "$setup")")"
+      fi
+      mv "$staging/$yad_name"/* "$target"/
+      rm -rf "$staging"
+      write_launch "$target"
+      continue
+    fi
+
     # GOG ships its Linux builds as a MojoSetup shell script with a zip glued to
     # the end: the game sits under data/noarch/, and unzip reads straight past
     # the script part. No wine, no innoextract, and what comes out is native.

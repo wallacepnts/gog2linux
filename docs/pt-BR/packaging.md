@@ -152,6 +152,30 @@ Foi o caso do Owlboy aqui: a versão Windows não tocava a trilha sonora por um
 defeito na reimplementação de áudio do wine, e a build Linux simplesmente
 funciona.
 
+## Instalador YAD (LinuxRuleZ e semelhantes)
+
+Outro `.sh` grande, com outra coisa dentro: um script com um tar comprimido em
+zstd colado no fim. Largue no `install/` do mesmo jeito:
+
+```bash
+./build.sh
+```
+
+Esses instaladores trazem uma opção `-e` que desempacota sem abrir interface
+nenhuma, e o `build.sh` a usa — não há nada para decifrar, só dizer para onde.
+O nome que aparece na listagem é o que o próprio instalador declara.
+
+O que sai é um pacote **nativo**, com o launcher na raiz e o jogo em `game/`.
+
+Duas coisas a saber:
+
+- Se o pacote trouxer um `uninstall.sh` próprio, **o do projeto substitui o
+  dele**. É o que acontece com todo `.pc`, mas aqui apaga um arquivo que veio no
+  jogo.
+- Muitos desses pacotes são *Steam-Rip* com **Goldberg**, um emulador que
+  substitui a autenticação da Steam. Diferente das builds da GOG, que são
+  DRM-free de origem.
+
 ## Trazendo um jogo instalado por outro app
 
 Jogo instalado fora — por Lutris, Bottles, Faugus, ou uma sessão de wine na mão

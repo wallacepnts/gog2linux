@@ -386,6 +386,39 @@ for launcher in start.sh start; do
   [ -f "$d/play.sh" ] || { echo "FAILED native-$launcher: got no play.sh"; exit 1; }
 done
 
+# a YAD Simple Installer carries its own -e flag: it asks for a destination on
+# stdin and unpacks to <destination>/<app>. build.sh has only to ask, and to
+# move what comes out into the .pc.
+cat > "$tmp/yadsetup.sh" <<'YADSTUB'
+#!/bin/sh
+# YAD Simple Installer script version 12.01.2021
+app="Stub Game"
+case $1 in
+  -e) read -r p
+      mkdir -p "$p/$app/game"
+      printf '#!/bin/sh\ncd game && ./Binary\n' > "$p/$app/start"
+      printf '#!/bin/sh\necho ran\n' > "$p/$app/game/Binary"
+      chmod +x "$p/$app/start" "$p/$app/game/Binary" ;;
+esac
+YADSTUB
+chmod +x "$tmp/yadsetup.sh"
+out=$("$here/build.sh" "$tmp/yad.pc" "$tmp/yadsetup.sh" 2>&1)
+has yad "$out" "YAD installer (Stub Game)"
+has yad-done "$out" "native, through launch.sh"
+has yad-launch "$(cat "$tmp/yad.pc/launch.sh")" "exec ./start"
+[ -x "$tmp/yad.pc/game/Binary" ] || { echo "FAILED yad: game binary missing"; exit 1; }
+[ -d "$tmp/yad.pc/Stub Game" ] && { echo "FAILED yad: left the app folder nested"; exit 1; }
+# nothing of the staging area may survive, beside the game or anywhere else
+case "$(ls -A "$(dirname "$tmp/yad.pc")")" in
+  *.gog2linux-yad*) echo "FAILED yad: left a staging folder behind"; exit 1 ;;
+esac
+
+# the inbox names a YAD installer by the app it declares, not by its filename
+mkdir -p "$tmp/yadbox"
+cp "$tmp/yadsetup.sh" "$tmp/yadbox/MARVEL_Something_[Linux,_LinuxRuleZ!].sh"
+has yad-inbox "$(GOG2LINUX_INBOX="$tmp/yadbox" GOG2LINUX_GAMES="$tmp/yadgames" \
+  "$here/build.sh" </dev/null 2>&1)" "Stub Game"
+
 # a repack ships the decompressors and keeps the game in its own archives:
 # extracting reaches the scaffolding, so say that instead of "no executable"
 mkdir -p "$tmp/fg"; touch "$tmp/fg/setup.exe" "$tmp/fg/fg-01.bin" "$tmp/fg/fg-02.bin"

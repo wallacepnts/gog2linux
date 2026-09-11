@@ -155,6 +155,30 @@ the Windows one — it tends to settle in one step what costs hours under wine.
 That was Owlboy here: the Windows version played no music because of a defect in
 wine's audio reimplementation, and the Linux build simply works.
 
+## YAD installers (LinuxRuleZ and the like)
+
+Another big `.sh`, with something else inside: a script with a zstd-compressed
+tarball glued to the end. Drop it in `install/` just the same:
+
+```bash
+./build.sh
+```
+
+These installers carry an `-e` flag that unpacks with no interface at all, and
+`build.sh` uses it -- there is nothing to decipher here, only somewhere to say.
+The name in the listing is the one the installer declares for itself.
+
+What comes out is a **native** package: launcher at the root, game under `game/`.
+
+Two things worth knowing:
+
+- If the package brings an `uninstall.sh` of its own, **the project's replaces
+  it**. That happens to every `.pc`, but here it overwrites a file that came
+  with the game.
+- Many of these are *Steam rips* carrying **Goldberg**, an emulator that stands
+  in for Steam's authentication. Unlike GOG's builds, which are DRM-free to
+  begin with.
+
 ## Bringing in a game installed by another app
 
 A game installed elsewhere — by Lutris, Bottles, Faugus, or a plain wine session
