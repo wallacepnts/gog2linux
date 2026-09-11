@@ -98,8 +98,16 @@ frequently only the latter survives wine.
 
 ## The machine stays awake while you play
 
-By default `play.sh` runs wine inside `systemd-inhibit --what=idle`. A wine game
-touches neither the screensaver nor the idle-inhibit protocol, so without this
-the desktop keeps counting down and suspends in the middle of a level. The hold
-lasts exactly as long as the game. Native games go through SDL, which already
-does it; with no systemd, there is nothing to hold.
+By default `play.sh` runs the game inside `systemd-inhibit --what=idle`. A wine
+game touches neither the screensaver nor the idle-inhibit protocol, so without
+this the desktop keeps counting down and suspends in the middle of a level. The
+hold lasts exactly as long as the game.
+
+A native game gets the same hold. SDL announces itself -- a Unity game registers
+"Playing a game" the moment it opens a window -- but **Ren'Py registers nothing**,
+and from outside there is no telling which engine is in the folder. A visual
+novel, where you read for minutes without touching the keyboard, is exactly
+where the screen would blank. Where SDL already holds, a second hold costs
+nothing.
+
+To turn it off: `GOG2LINUX_INHIBIT=no`. With no systemd, there is nothing to hold.

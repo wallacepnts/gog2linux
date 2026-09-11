@@ -51,6 +51,94 @@ write_launch() {
   chmod +x "$1/launch.sh"
 }
 
+# Adding the game to the desktop menu, for whichever kind of package this is.
+# A function, not a run of code at the end: a native package is finished long
+# before that point, and used to walk out without ever being asked.
+desktop_entry() {
+  # A .desktop entry is all KDE, GNOME and XFCE need; no per-desktop code.
+  if [ "$desktop" = ask ] && [ -t 0 ]; then
+    printf "$M_ASK_MENU" "$name"
+    read -r answer
+    case "$answer" in ["$M_YES"]*) desktop=yes ;; *) desktop=no ;; esac
+  fi
+
+  if [ "$desktop" = yes ]; then
+    apps="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+    mkdir -p "$apps"
+    entry="$apps/gog-$(basename "${target%.pc}").desktop"
+    # a .ico holds every size; desktops tend to grab the first (16x16), so pull
+    # out the biggest one. GOG stores them PNG-compressed, so it is a plain cut.
+    icon=$(python3 - "$target" "$(basename "${target%.pc}")" "${exe//\"/}" <<'PYICON'
+import glob, os, struct, sys
+
+target = sys.argv[1]
+# A release can carry five .ico files: the game, the GOG logo, a Games for
+# Windows badge, the support page, a readme. Prefer the one named after the
+# game, then GOG's per-game icon; the generic logo is a last resort.
+slug = (sys.argv[2] if len(sys.argv) > 2 else '').lower()
+stem = os.path.splitext(os.path.basename(sys.argv[3] if len(sys.argv) > 3 else ''))[0].lower()
+# NOX.ICO exists next to gog.ico: globbing '*.ico' on Linux would miss it
+every = sorted(f for f in glob.glob(os.path.join(target, '*')) if f.lower().endswith('.ico'))
+
+
+def named(*wanted):
+    return [f for f in every if os.path.splitext(os.path.basename(f))[0].lower() in wanted]
+
+
+found = (named(slug, stem)
+         or [f for f in every if os.path.basename(f).lower().startswith('goggame-')]
+         or [f for f in every if os.path.basename(f).lower().startswith('gog')]
+         or every)
+if found:
+    blob = open(found[0], 'rb').read()
+    best = (0, None)
+    for i in range(struct.unpack('<H', blob[4:6])[0]):
+        w, h, _, _, _, _, size, off = struct.unpack('<BBBBHHII', blob[6 + i * 16:22 + i * 16])
+        if (w or 256) * (h or 256) > best[0] and blob[off:off + 4] == b'\x89PNG':
+            best = ((w or 256) * (h or 256), blob[off:off + size])
+    if best[1]:
+        png = os.path.join(target, 'icon.png')
+        open(png, 'wb').write(best[1])
+        print(png)
+    else:
+        print(found[0])
+PYICON
+  ) || icon=
+  # A Linux build carries no .ico at all: GOG keeps a PNG under support/, the
+  # YAD packagers keep one beside the game. Either beats no icon.
+  if [ -z "$icon" ]; then
+    for candidate in "$target/support/icon.png" "$target/game/icon.png" \
+                     "$target/icon.png"; do
+      [ -f "$candidate" ] && { icon=$candidate; break; }
+    done
+  fi
+    {
+      echo "[Desktop Entry]"
+      echo "Type=Application"
+      echo "Name=$name"
+      # a source port beats wine; drop a launch.sh in the folder and it wins
+      launcher=$target/play.sh
+      [ -x "$target/launch.sh" ] && launcher=$target/launch.sh
+      # Exec is split on whitespace, so "Gravity Circuit.pc" would arrive as two
+      # arguments and start nothing. Quoting is the fix, and inside the quotes the
+      # spec wants a backslash before \ " ` and $. Path and Icon are plain
+      # strings, taken literally, and must NOT be quoted the same way.
+      echo "Exec=\"$(printf '%s' "$launcher" | sed 's/[\\"`$]/\\&/g')\""
+      echo "Path=$target"
+      [ -n "$icon" ] && echo "Icon=$icon"
+      echo "Categories=Game;"
+      # read from the PE header, which a native package has none of -- and no
+    # native launcher here wants a terminal window either way
+    echo "Terminal=${exe_console:-false}"
+    } > "$entry"
+    chmod +x "$entry"
+
+
+    command -v update-desktop-database >/dev/null && update-desktop-database "$apps" 2>/dev/null
+    printf "$M_ENTRY" "$entry"
+  fi
+}
+
 # protonfixes ships a workaround per game -- protontricks('xact') for one whose
 # audio needs it, a DLL override, a launch flag -- and chooses it by GAMEID.
 # umu itself never looks the id up: "GAMEID is strictly required and the client
@@ -853,6 +941,7 @@ if [ -z "$exe" ] && { [ -x "$target/launch.sh" ] || native_start "$target" >/dev
   write_launch "$target"
   cp "$here/play.sh" "$here/uninstall.sh" "$here/saves.sh" "$target/"
   printf "$M_NATIVE_PKG" "$(basename "$target")"
+  desktop_entry
   exit 0
 fi
 
@@ -1319,78 +1408,7 @@ if [ -n "$missing" ]; then
   printf '%b' "$missing"   # the messages carry their own newlines
 fi
 
-# A .desktop entry is all KDE, GNOME and XFCE need; no per-desktop code.
-if [ "$desktop" = ask ] && [ -t 0 ]; then
-  printf "$M_ASK_MENU" "$name"
-  read -r answer
-  case "$answer" in ["$M_YES"]*) desktop=yes ;; *) desktop=no ;; esac
-fi
-
-if [ "$desktop" = yes ]; then
-  apps="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
-  mkdir -p "$apps"
-  entry="$apps/gog-$(basename "${target%.pc}").desktop"
-  # a .ico holds every size; desktops tend to grab the first (16x16), so pull
-  # out the biggest one. GOG stores them PNG-compressed, so it is a plain cut.
-  icon=$(python3 - "$target" "$(basename "${target%.pc}")" "${exe//\"/}" <<'PYICON'
-import glob, os, struct, sys
-
-target = sys.argv[1]
-# A release can carry five .ico files: the game, the GOG logo, a Games for
-# Windows badge, the support page, a readme. Prefer the one named after the
-# game, then GOG's per-game icon; the generic logo is a last resort.
-slug = (sys.argv[2] if len(sys.argv) > 2 else '').lower()
-stem = os.path.splitext(os.path.basename(sys.argv[3] if len(sys.argv) > 3 else ''))[0].lower()
-# NOX.ICO exists next to gog.ico: globbing '*.ico' on Linux would miss it
-every = sorted(f for f in glob.glob(os.path.join(target, '*')) if f.lower().endswith('.ico'))
-
-
-def named(*wanted):
-    return [f for f in every if os.path.splitext(os.path.basename(f))[0].lower() in wanted]
-
-
-found = (named(slug, stem)
-         or [f for f in every if os.path.basename(f).lower().startswith('goggame-')]
-         or [f for f in every if os.path.basename(f).lower().startswith('gog')]
-         or every)
-if found:
-    blob = open(found[0], 'rb').read()
-    best = (0, None)
-    for i in range(struct.unpack('<H', blob[4:6])[0]):
-        w, h, _, _, _, _, size, off = struct.unpack('<BBBBHHII', blob[6 + i * 16:22 + i * 16])
-        if (w or 256) * (h or 256) > best[0] and blob[off:off + 4] == b'\x89PNG':
-            best = ((w or 256) * (h or 256), blob[off:off + size])
-    if best[1]:
-        png = os.path.join(target, 'icon.png')
-        open(png, 'wb').write(best[1])
-        print(png)
-    else:
-        print(found[0])
-PYICON
-) || icon=
-  {
-    echo "[Desktop Entry]"
-    echo "Type=Application"
-    echo "Name=$name"
-    # a source port beats wine; drop a launch.sh in the folder and it wins
-    launcher=$target/play.sh
-    [ -x "$target/launch.sh" ] && launcher=$target/launch.sh
-    # Exec is split on whitespace, so "Gravity Circuit.pc" would arrive as two
-    # arguments and start nothing. Quoting is the fix, and inside the quotes the
-    # spec wants a backslash before \ " ` and $. Path and Icon are plain
-    # strings, taken literally, and must NOT be quoted the same way.
-    echo "Exec=\"$(printf '%s' "$launcher" | sed 's/[\\"`$]/\\&/g')\""
-    echo "Path=$target"
-    [ -n "$icon" ] && echo "Icon=$icon"
-    echo "Categories=Game;"
-    echo "Terminal=$exe_console"
-  } > "$entry"
-  chmod +x "$entry"
-
-
-  command -v update-desktop-database >/dev/null && update-desktop-database "$apps" 2>/dev/null
-  printf "$M_ENTRY" "$entry"
-fi
+desktop_entry
 
 # the installers did their job and weigh several GB; offer to reclaim the space,
 # but only after everything above went through -- a half-built folder is worth

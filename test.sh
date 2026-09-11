@@ -419,6 +419,20 @@ cp "$tmp/yadsetup.sh" "$tmp/yadbox/MARVEL_Something_[Linux,_LinuxRuleZ!].sh"
 has yad-inbox "$(GOG2LINUX_INBOX="$tmp/yadbox" GOG2LINUX_GAMES="$tmp/yadgames" \
   "$here/build.sh" </dev/null 2>&1)" "Stub Game"
 
+# a native package is a game like any other and belongs in the menu too -- it
+# used to walk out before ever being asked. Its icon is a PNG the packager
+# shipped, since a Linux build carries no .ico for the reader to cut up.
+mkdir -p "$tmp/nd.pc/support" "$tmp/nd.pc/game"
+printf '#!/bin/sh\ncd game && ./Binary\n' > "$tmp/nd.pc/start.sh"
+printf '#!/bin/sh\necho ran\n' > "$tmp/nd.pc/game/Binary"
+printf 'png' > "$tmp/nd.pc/support/icon.png"
+chmod +x "$tmp/nd.pc/start.sh" "$tmp/nd.pc/game/Binary"
+XDG_DATA_HOME="$tmp/xdg" "$here/build.sh" --desktop "$tmp/nd.pc" >/dev/null
+[ -f "$tmp/xdg/applications/gog-nd.desktop" ] ||
+  { echo "FAILED native-desktop: no menu entry for a native package"; exit 1; }
+has native-desktop-icon "$(cat "$tmp/xdg/applications/gog-nd.desktop")" "support/icon.png"
+has native-desktop-term "$(cat "$tmp/xdg/applications/gog-nd.desktop")" "Terminal=false"
+
 # a repack ships the decompressors and keeps the game in its own archives:
 # extracting reaches the scaffolding, so say that instead of "no executable"
 mkdir -p "$tmp/fg"; touch "$tmp/fg/setup.exe" "$tmp/fg/fg-01.bin" "$tmp/fg/fg-02.bin"
@@ -781,6 +795,19 @@ chmod +x "$tmp/bin/systemd-inhibit"
 awake=$(PATH="$tmp/bin:$PATH" WINE="$tmp/fakewine" "$tmp/aw.pc/play.sh")
 has inhibit "$awake" "held: --what=idle --who=gog2linux"
 has inhibit-cmd "$awake" "$tmp/aw.pc|$tmp/aw.pc/.prefix||game.exe"
+
+# a native game gets the same treatment. SDL registers "Playing a game" on its
+# own, but Ren'Py registers nothing, and from outside there is no telling which
+# engine is in the folder -- so hold idle off for both. The native paths exec
+# straight out of play.sh, and used to leave without ever holding anything.
+mkdir -p "$tmp/awn.pc"; cp "$here/play.sh" "$tmp/awn.pc/"
+printf '#!/bin/sh\necho "native ran"\n' > "$tmp/awn.pc/launch.sh"
+chmod +x "$tmp/awn.pc/launch.sh"
+awoke=$(PATH="$tmp/bin:$PATH" WINE="$tmp/fakewine" "$tmp/awn.pc/play.sh")
+has inhibit-native "$awoke" "held: --what=idle --who=gog2linux"
+has inhibit-native-ran "$awoke" "native ran"
+eq inhibit-native-off "$(PATH="$tmp/bin:$PATH" WINE="$tmp/fakewine" \
+                         GOG2LINUX_INHIBIT=no "$tmp/awn.pc/play.sh")" "native ran"
 
 # and it can be turned off, for a machine that would rather sleep
 eq inhibit-off "$(PATH="$tmp/bin:$PATH" WINE="$tmp/fakewine" GOG2LINUX_INHIBIT=no \

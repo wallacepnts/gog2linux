@@ -74,6 +74,18 @@ if [ ! -e "$target/autorun.cmd" ]; then
   done
 fi
 
+# A game never tells the desktop it is busy on its own -- wine touches neither
+# the X screensaver nor the idle-inhibit protocol, and a native engine only
+# sometimes does: SDL registers "Playing a game" the moment it opens a window,
+# Ren'Py registers nothing at all. Holding idle off here covers both, costs a
+# duplicate inhibitor where SDL already has one, and lets go when the game ends.
+# Worked out before anything is executed, because the native paths exec straight
+# out of this script and would otherwise never reach it.
+inhibit_cmd=()
+if [ "${GOG2LINUX_INHIBIT:-}" != no ] && command -v systemd-inhibit >/dev/null 2>&1; then
+  inhibit_cmd=(systemd-inhibit --what=idle --who=gog2linux --why="${target##*/}")
+fi
+
 # A native engine beats wine, and there are two ways to find one. FORCE_WINE=1
 # skips both, and so does asking for a specific executable.
 #
@@ -85,7 +97,7 @@ if [ -z "${FORCE_WINE:-}" ] && [ -z "$override" ] && [ -f "$target/launch.sh" ];
   [ -x "$target/launch.sh" ] || chmod +x "$target/launch.sh" 2>/dev/null || true
   if [ -x "$target/launch.sh" ]; then
     cd "$target"
-    exec "$target/launch.sh" "$@"
+    exec "${inhibit_cmd[@]}" "$target/launch.sh" "$@"
   fi
   printf "$M_NO_EXEC" "$target/launch.sh" >&2
 fi
@@ -101,7 +113,7 @@ if [ -z "${FORCE_WINE:-}" ] && [ -z "$override" ] && [ ${#native_lib[@]} -gt 0 ]
     [ -x "$candidate" ] || chmod +x "$candidate" 2>/dev/null || true
     if [ -x "$candidate" ]; then
       cd "$target"
-      exec "$candidate"
+      exec "${inhibit_cmd[@]}" "$candidate"
     fi
     printf "$M_NO_EXEC" "$candidate" >&2
     break
@@ -253,19 +265,12 @@ esac
 
 cd "$target/$DIR"
 
-# A wine game never tells the desktop it is busy: it does not touch the X
-# screensaver and speaks no idle-inhibit protocol, so the countdown keeps
-# running and the machine suspends in the middle of a level. This holds it off
-# for exactly as long as the game runs, and lets go on its own. Native games go
-# through SDL, which already does this. No systemd: nothing to hold.
 # the line below runs through eval, so anything with a space in it has to reach
-# eval already quoted -- a Proton build lives in "Proton - Experimental"
+# eval already quoted -- a Proton build lives in "Proton - Experimental", and
+# the inhibitor's --why carries the game's folder name, spaces and all
 winecmd=$(printf '%q' "${WINE:-wine}")
 inhibit=
-if [ "${GOG2LINUX_INHIBIT:-}" != no ] && command -v systemd-inhibit >/dev/null 2>&1; then
-  inhibit=$(printf '%q ' systemd-inhibit --what=idle --who=gog2linux \
-                         --why="${target##*/}")
-fi
+[ ${#inhibit_cmd[@]} -gt 0 ] && inhibit=$(printf '%q ' "${inhibit_cmd[@]}")
 
 # Old games ask for a 640x480 fullscreen mode wine cannot really set, so they
 # paint a small picture in the corner of a big black window. Wrapping them in a

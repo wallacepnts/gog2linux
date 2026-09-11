@@ -100,8 +100,15 @@ clássica e uma DirectX, e com frequência só a segunda sobrevive ao wine.
 
 ## A máquina não dorme durante o jogo
 
-Por padrão o `play.sh` roda o wine dentro de um `systemd-inhibit --what=idle`.
+Por padrão o `play.sh` roda o jogo dentro de um `systemd-inhibit --what=idle`.
 Jogo no wine não mexe no protetor de tela nem fala o protocolo de ociosidade,
 então sem isso o contador do desktop continua correndo e a máquina entra em
-espera no meio da partida. A trava dura só enquanto o jogo roda. Jogo nativo
-passa pelo SDL, que já faz isso sozinho; sem systemd, não há o que travar.
+espera no meio da partida. A trava dura só enquanto o jogo roda.
+
+Jogo nativo recebe a mesma trava. O SDL se anuncia sozinho — um jogo Unity
+registra "Playing a game" assim que abre a janela —, mas **o Ren'Py não registra
+nada**, e de fora não há como saber qual motor está na pasta. Numa visual novel,
+onde se passa minutos lendo sem tocar no teclado, é exatamente onde a tela
+apagaria. Onde o SDL já trava, a segunda trava não custa nada.
+
+Para desligar: `GOG2LINUX_INHIBIT=no`. Sem systemd, não há o que travar.
