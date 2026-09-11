@@ -19,18 +19,34 @@ shopt -s dotglob nullglob
 
 die() { echo "$*" >&2; exit 1; }
 
-# The launcher play.sh looks for. A native package -- GOG's own Linux build, a
-# Steam rip, anything following the same shape -- puts start.sh at its root and
-# the game in game/; this is the one line that turns that into a .pc.
+# A native package -- GOG's own Linux build, a Steam rip, a YAD installer --
+# puts its launcher at the root and the game under game/. The shape is the
+# convention; the name is the packager's taste. Prints the name, or fails.
+native_start() {
+  local candidate
+  for candidate in start.sh start; do
+    if [ -f "$1/$candidate" ]; then
+      printf '%s' "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
+# The launcher play.sh looks for: the one line that turns such a folder into a
+# .pc. Nothing to point at is not an error -- the caller has other ways to find
+# the game, and this must not take the script down with set -e.
 write_launch() {
+  local start
   [ -e "$1/launch.sh" ] && return 0
-  chmod +x "$1/start.sh" 2>/dev/null || true
+  start=$(native_start "$1") || return 0
+  chmod +x "$1/$start" 2>/dev/null || true
   {
     echo '#!/bin/sh'
-    echo '# Native build: start.sh does the cd into game/ and runs the binary.'
+    echo "# Native build: $start does the cd into game/ and runs the binary."
     echo '# play.sh prefers this file over anything that involves wine.'
     echo 'here=$(dirname "$(readlink -f "$0")")'
-    echo 'cd "$here" && exec ./start.sh "$@"'
+    echo "cd \"\$here\" && exec ./$start \"\$@\""
   } > "$1/launch.sh"
   chmod +x "$1/launch.sh"
 }
@@ -796,7 +812,7 @@ fi
 # the Linux build GOG ships separately, or a LOVE game. There is no Windows
 # executable to look for, and play.sh reaches launch.sh long before it wants an
 # autorun.cmd. Refresh the helper scripts and call it done.
-if [ -z "$exe" ] && { [ -x "$target/launch.sh" ] || [ -f "$target/start.sh" ]; }; then
+if [ -z "$exe" ] && { [ -x "$target/launch.sh" ] || native_start "$target" >/dev/null; }; then
   write_launch "$target"
   cp "$here/play.sh" "$here/uninstall.sh" "$here/saves.sh" "$target/"
   printf "$M_NATIVE_PKG" "$(basename "$target")"

@@ -372,6 +372,20 @@ chmod +x "$tmp/nat.pc/launch.sh"
 has native-pkg "$("$here/build.sh" "$tmp/nat.pc")" "native, through launch.sh"
 [ -f "$tmp/nat.pc/play.sh" ] || { echo "FAILED: native package got no play.sh"; exit 1; }
 
+# the launcher at the root is the convention; its name is the packager's taste.
+# GOG writes start.sh, a YAD installer writes plain start -- both are finished
+# packages, and both need the launch.sh play.sh looks for.
+for launcher in start.sh start; do
+  d="$tmp/ns-$launcher.pc"
+  mkdir -p "$d/game"
+  printf '#!/bin/sh\ncd game && ./Binary\n' > "$d/$launcher"
+  printf '#!/bin/sh\necho ran\n' > "$d/game/Binary"
+  chmod +x "$d/$launcher" "$d/game/Binary"
+  has "native-$launcher" "$("$here/build.sh" "$d")" "native, through launch.sh"
+  has "native-$launcher-cmd" "$(cat "$d/launch.sh")" "exec ./$launcher"
+  [ -f "$d/play.sh" ] || { echo "FAILED native-$launcher: got no play.sh"; exit 1; }
+done
+
 # a repack ships the decompressors and keeps the game in its own archives:
 # extracting reaches the scaffolding, so say that instead of "no executable"
 mkdir -p "$tmp/fg"; touch "$tmp/fg/setup.exe" "$tmp/fg/fg-01.bin" "$tmp/fg/fg-02.bin"
