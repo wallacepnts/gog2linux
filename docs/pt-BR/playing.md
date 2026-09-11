@@ -55,6 +55,21 @@ Ele empacota `.prefix/drive_c/users` — Documentos, Saved Games, AppData — ma
 qualquer pasta `SAVE`, `Saves`, `savegames` ou `Profiles` dentro do jogo, e
 mostra quais encontrou.
 
+Jogo nativo costuma gravar **fora** da pasta do jogo, e isso também entra no
+backup, voltando ao lugar certo no `restore`:
+
+- **Steam rip com Goldberg** — se houver um `local_save.txt`, ele nomeia uma
+  pasta dentro do jogo (que raramente se chama "save", então só esse arquivo a
+  encontra). Sem ele, os saves vão para
+  `~/.local/share/Goldberg SteamEmu Saves/<AppID>/`, e o AppID sai do
+  `steam_appid.txt` que vem junto.
+- **Ren'Py** — `~/.renpy/<Nome>/`, numa pasta com o nome que o jogo usa, não o
+  nosso. O `saves.sh` descobre qual é pelo launcher que o jogo traz.
+
+Enquanto estiver aí: no Goldberg, `settings/language.txt` define o idioma e
+`settings/account_name.txt` o nome do jogador. Um Steam rip com `activated.ini`
+usa `Language` e `UserName` para o mesmo fim.
+
 O `uninstall.sh` faz o backup antes de apagar qualquer coisa, e com `-y` faz sem
 perguntar. O jogo você recupera do instalador; o save, não.
 

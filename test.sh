@@ -510,6 +510,44 @@ eq save-prefix "$(cat "$tmp/sv2.pc/.prefix/drive_c/users/w/Documents/save.txt")"
 
 has saves-ptbr "$(GOG2LINUX_LANG=pt "$tmp/sv2.pc/saves.sh" backup "$tmp/bk2.tar.gz")" "backup feito:"
 
+# a Steam rip saves through Goldberg. local_save.txt names a folder inside the
+# game -- and it is not called "save", so only that file can find it.
+mkdir -p "$tmp/gb.pc/MyGame Goldberg/settings"; touch "$tmp/gb.pc/Game.exe"
+printf 'MyGame Goldberg' > "$tmp/gb.pc/local_save.txt"
+printf 'slot' > "$tmp/gb.pc/MyGame Goldberg/settings/account_name.txt"
+printf '{"name":"Gb","playTasks":[{"category":"game","path":"Game.exe"}]}' > "$tmp/gb.pc/goggame-9.info"
+"$here/build.sh" --no-desktop "$tmp/gb.pc" >/dev/null
+has saves-goldberg-local "$("$tmp/gb.pc/saves.sh" backup "$tmp/gb.tar.gz")" "MyGame Goldberg"
+
+# without local_save.txt the emulator writes outside the game, one folder per
+# Steam App ID. Those have to travel too, and go back where they came from.
+mkdir -p "$tmp/gs.pc/game/steam_settings" "$tmp/xdgsave/Goldberg SteamEmu Saves/12345"
+touch "$tmp/gs.pc/Game.exe"
+printf '12345' > "$tmp/gs.pc/game/steam_settings/steam_appid.txt"
+printf 'progress' > "$tmp/xdgsave/Goldberg SteamEmu Saves/12345/remote.dat"
+printf '{"name":"Gs","playTasks":[{"category":"game","path":"Game.exe"}]}' > "$tmp/gs.pc/goggame-9.info"
+"$here/build.sh" --no-desktop "$tmp/gs.pc" >/dev/null
+XDG_DATA_HOME="$tmp/xdgsave" "$tmp/gs.pc/saves.sh" backup "$tmp/gs.tar.gz" >/dev/null
+rm -rf "$tmp/xdgsave/Goldberg SteamEmu Saves/12345"
+XDG_DATA_HOME="$tmp/xdgsave" "$tmp/gs.pc/saves.sh" restore "$tmp/gs.tar.gz" >/dev/null
+eq saves-goldberg-shared "$(cat "$tmp/xdgsave/Goldberg SteamEmu Saves/12345/remote.dat")" "progress"
+
+# Ren'Py saves live in ~/.renpy under the game's own name. The launcher it ships
+# says which folder is its own -- and renpy/ is the engine's source, not a clue:
+# its persistent.py would otherwise claim ~/.renpy/persistent, shared by all.
+mkdir -p "$tmp/rp.pc/game/renpy" "$tmp/renpybase/Mine" "$tmp/renpybase/persistent"
+touch "$tmp/rp.pc/Game.exe" "$tmp/rp.pc/game/Mine.py" "$tmp/rp.pc/game/renpy/persistent.py"
+printf 'slot1' > "$tmp/renpybase/Mine/save.dat"
+printf 'shared' > "$tmp/renpybase/persistent/other.dat"
+printf '{"name":"Rp","playTasks":[{"category":"game","path":"Game.exe"}]}' > "$tmp/rp.pc/goggame-9.info"
+"$here/build.sh" --no-desktop "$tmp/rp.pc" >/dev/null
+out=$(RENPY_BASE="$tmp/renpybase" "$tmp/rp.pc/saves.sh" backup "$tmp/rp.tar.gz")
+has saves-renpy "$out" "renpybase/Mine"
+case "$out" in *persistent*) echo "FAILED saves-renpy-shared: took a folder shared by every game"; exit 1 ;; esac
+rm -rf "$tmp/renpybase/Mine"
+RENPY_BASE="$tmp/renpybase" "$tmp/rp.pc/saves.sh" restore "$tmp/rp.tar.gz" >/dev/null
+eq saves-renpy-back "$(cat "$tmp/renpybase/Mine/save.dat")" "slot1"
+
 # uninstalling backs the saves up before it deletes anything
 mkdir -p "$tmp/bye.pc/SAVE"; touch "$tmp/bye.pc/Game.exe"
 printf '{"name":"Bye","playTasks":[{"category":"game","path":"Game.exe"}]}' > "$tmp/bye.pc/goggame-9.info"

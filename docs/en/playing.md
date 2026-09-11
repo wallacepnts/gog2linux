@@ -54,6 +54,20 @@ It packs `.prefix/drive_c/users` — Documents, Saved Games, AppData — plus an
 `SAVE`, `Saves`, `savegames` or `Profiles` folder in the game directory, and
 prints which ones it found.
 
+A native game tends to write **outside** its own folder, and that travels in the
+backup too, going back where it belongs on `restore`:
+
+- **Steam rip on Goldberg** — a `local_save.txt`, if present, names a folder
+  inside the game (rarely called "save", so only that file finds it). Without
+  it the saves go to `~/.local/share/Goldberg SteamEmu Saves/<AppID>/`, and the
+  App ID comes from the `steam_appid.txt` shipped alongside.
+- **Ren'Py** — `~/.renpy/<Name>/`, under the name the game uses rather than
+  ours. `saves.sh` works out which folder is its own from the launcher it ships.
+
+While you are in there: Goldberg's `settings/language.txt` sets the game
+language and `settings/account_name.txt` the player name. A Steam rip carrying
+`activated.ini` uses `Language` and `UserName` for the same thing.
+
 `uninstall.sh` runs a backup before deleting anything, and with `-y` it does so
 without asking. The game comes back from the installer; the saves do not.
 
